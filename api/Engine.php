@@ -2291,16 +2291,14 @@ class _DevblocksUrlManager {
 		return $parts;
 	}
 	
-	function write($sQuery='',$full=false,$check_proxy=true) {
-		$args = $this->parseQueryString($sQuery);
+	function write($sQuery='',$full=false) {
+		$url = DevblocksPlatform::getUrlService();
+		$args = $url->parseQueryString($sQuery);
 		$c = @$args['c'];
 		
-		// Allow proxy override
-		if($check_proxy) {
-    		@$proxyssl = $_SERVER['HTTP_DEVBLOCKSPROXYSSL'];
-    		@$proxyhost = $_SERVER['HTTP_DEVBLOCKSPROXYHOST'];
-    		@$proxybase = $_SERVER['HTTP_DEVBLOCKSPROXYBASE'];
-		}
+	    @$proxyssl = $_SERVER['HTTP_DEVBLOCKSPROXYSSL'];
+	    @$proxyhost = $_SERVER['HTTP_DEVBLOCKSPROXYHOST'];
+	    @$proxybase = $_SERVER['HTTP_DEVBLOCKSPROXYBASE'];
 
 		// Proxy (Community Tool)
 		if(!empty($proxyhost)) {
@@ -2342,10 +2340,10 @@ class _DevblocksUrlManager {
 				$prefix = sprintf("%s://%s%s",
 					($this->isSSL() ? 'https' : 'http'),
 					$_SERVER['HTTP_HOST'],
-					DEVBLOCKS_APP_WEBPATH
+					DEVBLOCKS_WEBPATH
 				);
 			} else {
-				$prefix = DEVBLOCKS_APP_WEBPATH;
+				$prefix = DEVBLOCKS_WEBPATH;
 			}
 
 			// Index page
