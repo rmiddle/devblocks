@@ -1,4 +1,4 @@
-<?php
+f<?php
 include_once(DEVBLOCKS_PATH . "api/Engine.php");
 include_once(DEVBLOCKS_PATH . "api/Model.php");
 include_once(DEVBLOCKS_PATH . "api/DAO.php");
@@ -38,16 +38,16 @@ class DevblocksPlatform extends DevblocksEngine {
     const CACHE_EVENT_POINTS = 'devblocks_event_points';
     const CACHE_EVENTS = 'devblocks_events';
     const CACHE_ACL = 'devblocks_acl';
-    
+
 //    static private $pluginDelegate = null;
     static private $extensionDelegate = null;
-    
+
     static private $start_time = 0;
     static private $start_memory = 0;
     static private $start_peak_memory = 0;
-    
+
     static private $locale = 'en_US';
-    
+
     private function __construct() {}
 
 	/**
@@ -65,11 +65,11 @@ class DevblocksPlatform extends DevblocksEngine {
                     $var[$k] = get_magic_quotes_gpc() ? stripslashes($v) : $v;
                 }
 	        }
-	        
+
 	    } elseif (is_null($var) && !is_null($default)) {
 	        $var = $default;
 	    }
-	    
+
 	    if(!is_null($cast))
 	        @settype($var, $cast);
 
@@ -77,7 +77,7 @@ class DevblocksPlatform extends DevblocksEngine {
 	}
 
 	/**
-	 * Returns a string as a regexp. 
+	 * Returns a string as a regexp.
 	 * "*bob" returns "/(.*?)bob/".
 	 */
 	static function parseStringAsRegExp($string) {
@@ -85,24 +85,24 @@ class DevblocksPlatform extends DevblocksEngine {
 		$pattern = sprintf("/%s/i",str_replace(array('__any__'),'(.*?)', preg_quote($pattern)));
 		return $pattern;
 	}
-	
+
 	static function parseCrlfString($string) {
 		$parts = split("[\r\n]", $string);
-		
+
 		// Remove any empty tokens
 		foreach($parts as $idx => $part) {
 			$parts[$idx] = trim($part);
-			if(0 == strlen($parts[$idx])) 
+			if(0 == strlen($parts[$idx]))
 				unset($parts[$idx]);
 		}
-		
+
 		return $parts;
 	}
-	
+
 	/**
 	 * Returns a string as alphanumerics delimited by underscores.
-	 * For example: "Devs: 1000 Ways to Improve Sales" becomes 
-	 * "devs_1000_ways_to_improve_sales", which is suitable for 
+	 * For example: "Devs: 1000 Ways to Improve Sales" becomes
+	 * "devs_1000_ways_to_improve_sales", which is suitable for
 	 * displaying in a URL of a blog, faq, etc.
 	 *
 	 * @param string $str
@@ -110,10 +110,10 @@ class DevblocksPlatform extends DevblocksEngine {
 	 */
 	static function getStringAsURI($str) {
 		$str = strtolower($str);
-		
+
 		// turn non [a-z, 0-9, _] into whitespace
 		$str = preg_replace("/[^0-9a-z]/",' ',$str);
-		
+
 		// condense whitespace to a single underscore
 		$str = preg_replace('/\s\s+/', ' ', $str);
 
@@ -122,14 +122,14 @@ class DevblocksPlatform extends DevblocksEngine {
 
 		// remove a leading/trailing underscores
 		$str = trim($str, '_');
-		
+
 		return $str;
 	}
-	
+
 	/**
 	 * Takes a comma-separated value string and returns an array of tokens.
 	 * [TODO] Move to a FormHelper service?
-	 * 
+	 *
 	 * @param string $string
 	 * @return array
 	 */
@@ -138,19 +138,19 @@ class DevblocksPlatform extends DevblocksEngine {
 
 		if(!is_array($tokens))
 			return array();
-		
+
 		foreach($tokens as $k => $v) {
 			$tokens[$k] = trim($v);
 			if(0==strlen($tokens[$k]))
 				unset($tokens[$k]);
 		}
-		
+
 		return $tokens;
 	}
-	
+
 	/**
 	 * Clears any platform-level plugin caches.
-	 * 
+	 *
 	 */
 	static function clearCache() {
 	    $cache = self::getCacheService(); /* @var $cache Zend_Cache_Core */
@@ -169,7 +169,7 @@ class DevblocksPlatform extends DevblocksEngine {
 	    foreach($langs as $lang_code => $lang_name) {
 	    	$cache->remove(self::CACHE_TAG_TRANSLATIONS . '_' . $lang_code);
 	    }
-	    
+
 	    // Recache plugins
 		self::getPluginRegistry();
 		self::getExtensionRegistry();
@@ -179,45 +179,45 @@ class DevblocksPlatform extends DevblocksEngine {
 		$classloader = self::getClassLoaderService();
 		return $classloader->loadClass($className);
 	}
-	
+
 	public static function registerClasses($file,$classes=array()) {
 		$classloader = self::getClassLoaderService();
 		return $classloader->registerClasses($file,$classes);
 	}
-	
+
 	public static function getStartTime() {
 		return self::$start_time;
 	}
-	
+
 	public static function getStartMemory() {
 		return self::$start_memory;
 	}
-	
+
 	public static function getStartPeakMemory() {
 		return self::$start_peak_memory;
 	}
-	
+
 	/**
 	 * Checks whether the active database has any tables.
-	 * 
+	 *
 	 * @return boolean
 	 */
 	static function isDatabaseEmpty() {
 		$tables = self::getDatabaseTables();
 	    return empty($tables);
 	}
-	
+
 	static function getDatabaseTables() {
 	    $cache = self::getCacheService();
 	    $tables = array();
-	    
+
 	    if(null === ($tables = $cache->load(self::CACHE_TABLES))) {
 	        $db = self::getDatabaseService(); /* @var $db ADODB_Connection */
-	        
+
 	        // Make sure the database connection is valid or error out.
 	        if(is_null($db) || !$db->IsConnected())
 	        	return array();
-	        
+
 	        $tables = $db->MetaTables('TABLE',false);
 	        $cache->save($tables, self::CACHE_TABLES);
 	    }
@@ -230,19 +230,19 @@ class DevblocksPlatform extends DevblocksEngine {
 	 * @return boolean
 	 */
 	static function versionConsistencyCheck() {
-		$cache = DevblocksPlatform::getCacheService(); /* @var Zend_Cache_Core $cache */ 
-		
+		$cache = DevblocksPlatform::getCacheService(); /* @var Zend_Cache_Core $cache */
+
 		if(null === ($build_cache = $cache->load("devblocks_app_build"))
 			|| $build_cache != APP_BUILD) {
-				
+
 			// If build changed, clear cache regardless of patch status
 			// [TODO] We need to find a nicer way to not clear a shared memcached cluster when only one desk needs to
 			$cache = DevblocksPlatform::getCacheService(); /* @var $cache Zend_Cache_Core */
 			$cache->clean('all');
-			
+
 			// Re-read manifests
 			DevblocksPlatform::readPlugins();
-				
+
 			if(self::_needsToPatch()) {
 				return false; // the update script will handle new caches
 			} else {
@@ -251,10 +251,10 @@ class DevblocksPlatform extends DevblocksEngine {
 				return true;
 			}
 		}
-		
+
 		return true;
 	}
-	
+
 	/**
 	 * Enter description here...
 	 *
@@ -266,7 +266,7 @@ class DevblocksPlatform extends DevblocksEngine {
 
 		 // [JAS]: Devblocks
 		 array_unshift($containers, new PlatformPatchContainer());
-		 
+
 		 foreach($containers as $container) { /* @var $container DevblocksPatchContainerExtension */
 			foreach($container->getPatches() as $patch) { /* @var $patch DevblocksPatch */
 				if(!$patch->hasRun()) {
@@ -275,11 +275,11 @@ class DevblocksPlatform extends DevblocksEngine {
 				}
 			}
 		 }
-		 
+
 //		 echo "Don't need to run any patches.";
 		 return false;
 	}
-	
+
 	/**
 	 * Runs patches for all active plugins
 	 *
@@ -289,44 +289,44 @@ class DevblocksPlatform extends DevblocksEngine {
 	    // Log out all sessions before patching
 		$db = DevblocksPlatform::getDatabaseService();
 		$db->Execute(sprintf("DELETE FROM %s_session", APP_DB_PREFIX));
-		
+
 		$patchMgr = DevblocksPlatform::getPatchService();
-		
+
 //		echo "Patching platform... ";
-		
+
 		// [JAS]: Run our overloaded container for the platform
 		$patchMgr->registerPatchContainer(new PlatformPatchContainer());
-		
+
 		// Clean script
 		if(!$patchMgr->run()) {
 			return false;
-		    
+
 		} else { // success
 			// Read in plugin information from the filesystem to the database
 			DevblocksPlatform::readPlugins();
-			
+
 			$plugins = DevblocksPlatform::getPluginRegistry();
-			
+
 //			DevblocksPlatform::clearCache();
-			
+
 			// Run enabled plugin patches
 			$patches = DevblocksPlatform::getExtensions("devblocks.patch.container",false,true);
-			
+
 			if(is_array($patches))
-			foreach($patches as $patch_manifest) { /* @var $patch_manifest DevblocksExtensionManifest */ 
+			foreach($patches as $patch_manifest) { /* @var $patch_manifest DevblocksExtensionManifest */
 				if(null != ($container = $patch_manifest->createInstance())) { /* @var $container DevblocksPatchContainerExtension */
 					if(!is_null($container)) {
 						$patchMgr->registerPatchContainer($container);
 					}
 				}
 			}
-			
+
 //			echo "Patching plugins... ";
-			
+
 			if(!$patchMgr->run()) { // fail
 				return false;
 			}
-			
+
 //			echo "done!<br>";
 
 			$cache = self::getCacheService();
@@ -335,7 +335,7 @@ class DevblocksPlatform extends DevblocksEngine {
 			return true;
 		}
 	}
-	
+
 	/**
 	 * Returns the list of extensions on a given extension point.
 	 *
@@ -379,7 +379,7 @@ class DevblocksPlatform extends DevblocksEngine {
 	    if($as_instance && !is_null($result)) {
 	    	return $result->createInstance();
 	    }
-	    
+
 	    return $result;
 	}
 
@@ -396,7 +396,7 @@ class DevblocksPlatform extends DevblocksEngine {
 //	            $p->id = $point;
 //	            $points[$point] = $p;
 //	        }
-//	        	
+//
 //	        $points[$point]->extensions[$extension->id] = $extension;
 //	    }
 //
@@ -407,18 +407,18 @@ class DevblocksPlatform extends DevblocksEngine {
 	/**
 	 * Returns an array of all contributed extension manifests.
 	 *
-	 * @static 
+	 * @static
 	 * @return DevblocksExtensionManifest[]
 	 */
 	static function getExtensionRegistry($ignore_acl=false) {
 	    $cache = self::getCacheService();
-	    
+
 	    if(null === ($extensions = $cache->load(self::CACHE_EXTENSIONS))) {
 		    $db = DevblocksPlatform::getDatabaseService();
 		    if(is_null($db)) return;
-	
+
 		    $prefix = (APP_DB_PREFIX != '') ? APP_DB_PREFIX.'_' : ''; // [TODO] Cleanup
-	
+
 		    $sql = sprintf("SELECT e.id , e.plugin_id, e.point, e.pos, e.name , e.file , e.class, e.params ".
 				"FROM %sextension e ".
 				"INNER JOIN %splugin p ON (e.plugin_id=p.id) ".
@@ -428,7 +428,7 @@ class DevblocksPlatform extends DevblocksEngine {
 					$prefix
 				);
 			$rs = $db->Execute($sql); /* @var $rs ADORecordSet */
-				
+
 			if(is_a($rs,'ADORecordSet'))
 			while(!$rs->EOF) {
 			    $extension = new DevblocksExtensionManifest();
@@ -439,7 +439,7 @@ class DevblocksPlatform extends DevblocksEngine {
 			    $extension->file = $rs->fields['file'];
 			    $extension->class = $rs->fields['class'];
 			    $extension->params = @unserialize($rs->fields['params']);
-		
+
 			    if(empty($extension->params))
 					$extension->params = array();
 				$extensions[$extension->id] = $extension;
@@ -448,7 +448,7 @@ class DevblocksPlatform extends DevblocksEngine {
 
 			$cache->save($extensions, self::CACHE_EXTENSIONS);
 		}
-		
+
 		// Check with an extension delegate if we have one
 		if(!$ignore_acl && class_exists(self::$extensionDelegate) && method_exists('DevblocksExtensionDelegate','shouldLoadExtension')) {
 			if(is_array($extensions))
@@ -458,7 +458,7 @@ class DevblocksPlatform extends DevblocksEngine {
 					unset($extensions[$id]);
 			}
 		}
-		
+
 		return $extensions;
 	}
 
@@ -472,17 +472,17 @@ class DevblocksPlatform extends DevblocksEngine {
 
         $events = array();
         $plugins = self::getPluginRegistry();
-    	 
+
 		// [JAS]: Event point hashing/caching
 		if(is_array($plugins))
 		foreach($plugins as $plugin) { /* @var $plugin DevblocksPluginManifest */
             $events = array_merge($events,$plugin->event_points);
 		}
-    	
+
 		$cache->save($events, self::CACHE_EVENT_POINTS);
 		return $events;
 	}
-	
+
 	/**
 	 * @return DevblocksAclPrivilege[]
 	 */
@@ -508,52 +508,52 @@ class DevblocksPlatform extends DevblocksEngine {
 			$prefix
 		);
 		$rs = $db->Execute($sql); /* @var $rs ADORecordSet */
-		
+
 		if(is_a($rs,'ADORecordSet'))
 		while(!$rs->EOF) {
 			$priv = new DevblocksAclPrivilege();
 			$priv->id = $rs->fields['id'];
 			$priv->plugin_id = $rs->fields['plugin_id'];
 			$priv->label = $rs->fields['label'];
-			
+
 		    $acl[$priv->id] = $priv;
-		    
+
 		    $rs->MoveNext();
 		}
-        
+
 		$cache->save($acl, self::CACHE_ACL);
 		return $acl;
 	}
-	
+
 	static function getEventRegistry() {
 	    $cache = self::getCacheService();
 	    if(null !== ($events = $cache->load(self::CACHE_EVENTS)))
     	    return $events;
-	    
+
     	$extensions = self::getExtensions('devblocks.listener.event',false,true);
     	$events = array('*');
-    	 
+
 		// [JAS]: Event point hashing/caching
 		if(is_array($extensions))
 		foreach($extensions as $extension) { /* @var $extension DevblocksExtensionManifest */
             @$evts = $extension->params['events'][0];
-            
+
             // Global listeners (every point)
             if(empty($evts) && !is_array($evts)) {
                 $events['*'][] = $extension->id;
                 continue;
             }
-            
+
             if(is_array($evts))
             foreach(array_keys($evts) as $evt) {
-                $events[$evt][] = $extension->id; 
+                $events[$evt][] = $extension->id;
             }
 		}
-    	
+
 		$cache->save($events, self::CACHE_EVENTS);
 		return $events;
 	}
-	
+
 	/**
 	 * Returns an array of all contributed plugin manifests.
 	 *
@@ -575,7 +575,7 @@ class DevblocksPlatform extends DevblocksEngine {
 			$prefix
 		);
 		$rs = $db->Execute($sql); /* @var $rs ADORecordSet */
-		
+
 		if(is_a($rs,'ADORecordSet'))
 		while(!$rs->EOF) {
 		    $plugin = new DevblocksPluginManifest();
@@ -589,11 +589,11 @@ class DevblocksPlatform extends DevblocksEngine {
 		    @$plugin->file = $rs->fields['file'];
 		    @$plugin->class = $rs->fields['class'];
 		    @$plugin->dir = $rs->fields['dir'];
-	
+
 		    if(file_exists(DEVBLOCKS_PLUGIN_PATH . $plugin->dir . DIRECTORY_SEPARATOR . 'plugin.xml')) {
 		        $plugins[$plugin->id] = $plugin;
 		    }
-		    	
+
 		    $rs->MoveNext();
 		}
 
@@ -609,17 +609,17 @@ class DevblocksPlatform extends DevblocksEngine {
 		    $point->id = $rs->fields['id'];
 		    $point->name = $rs->fields['name'];
 		    $point->plugin_id = $rs->fields['plugin_id'];
-		    
+
 		    $params = $rs->fields['params'];
 		    $point->params = !empty($params) ? unserialize($params) : array();
 
 		    if(isset($plugins[$point->plugin_id])) {
 		    	$plugins[$point->plugin_id]->event_points[$point->id] = $point;
 		    }
-		    
+
 		    $rs->MoveNext();
 		}
-			
+
 		$cache->save($plugins, self::CACHE_PLUGINS);
 		return $plugins;
 	}
@@ -635,14 +635,14 @@ class DevblocksPlatform extends DevblocksEngine {
 
 	    if(isset($plugins[$id]))
 	    	return $plugins[$id];
-		
+
 	    return null;
 	}
 
 	/**
 	 * Reads and caches manifests from the plugin directory.
 	 *
-	 * @static 
+	 * @static
 	 * @return DevblocksPluginManifest[]
 	 */
 	static function readPlugins() {
@@ -667,12 +667,12 @@ class DevblocksPlatform extends DevblocksEngine {
 	            closedir($dh);
 	        }
 	    }
-	    
+
 		// [TODO] Instance the plugins in dependency order
 
 	    DAO_Platform::cleanupPluginTables();
 	    DevblocksPlatform::clearCache();
-	    
+
 	    return $plugins;
 	}
 
@@ -682,14 +682,14 @@ class DevblocksPlatform extends DevblocksEngine {
 	static function getConsoleLog() {
 		return _DevblocksLogManager::getConsoleLog();
 	}
-	
+
 	/**
 	 * @return _DevblocksCacheManager
 	 */
 	static function getCacheService() {
 	    return _DevblocksCacheManager::getInstance();
 	}
-	
+
 	/**
 	 * Enter description here...
 	 *
@@ -735,21 +735,21 @@ class DevblocksPlatform extends DevblocksEngine {
 	static function getEventService() {
 	    return _DevblocksEventManager::getInstance();
 	}
-	
+
 	/**
 	 * @return DevblocksProxy
 	 */
 	static function getProxyService() {
 	    return DevblocksProxy::getProxy();
 	}
-	
+
 	/**
 	 * @return _DevblocksClassLoadManager
 	 */
 	static function getClassLoaderService() {
 		return _DevblocksClassLoadManager::getInstance();
 	}
-	
+
 	/**
 	 * @return _DevblocksSessionManager
 	 */
@@ -775,14 +775,14 @@ class DevblocksPlatform extends DevblocksEngine {
 		@setlocale(LC_ALL, $locale);
 		self::$locale = $locale;
 	}
-	
+
 	static function getLocale() {
 		if(!empty(self::$locale))
 			return self::$locale;
-			
+
 		return 'en_US';
 	}
-	
+
 	/**
 	 * @return _DevblocksTranslationManager
 	 */
@@ -792,20 +792,20 @@ class DevblocksPlatform extends DevblocksEngine {
 	    if(Zend_Registry::isRegistered('Devblocks:getTranslationService:'.$locale)) {
 			return Zend_Registry::get('Devblocks:getTranslationService:'.$locale);
 		}
-						
+
 		$cache = self::getCacheService();
-	    
+
 	    if(null === ($map = $cache->load(self::CACHE_TAG_TRANSLATIONS.'_'.$locale))) { /* @var $cache Zend_Cache_Core */
 			$map = array();
 			$map_en = DAO_Translation::getMapByLang('en_US');
 			if(0 != strcasecmp('en_US', $locale))
 				$map_loc = DAO_Translation::getMapByLang($locale);
-			
+
 			// Loop through the English string objects
 			if(is_array($map_en))
 			foreach($map_en as $string_id => $obj_string_en) {
 				$string = '';
-				
+
 				// If we have a locale to check
 				if(isset($map_loc) && is_array($map_loc)) {
 					@$obj_string_loc = $map_loc[$string_id];
@@ -814,14 +814,14 @@ class DevblocksPlatform extends DevblocksEngine {
 						? $obj_string_loc->string_override
 						: $obj_string_loc->string_default;
 				}
-				
+
 				// If we didn't hit, load the English default
 				if(empty($string))
-				@$string = 
+				@$string =
 					(!empty($obj_string_en->string_override))
 					? $obj_string_en->string_override
 					: $obj_string_en->string_default;
-					
+
 				// If we found any match
 				if(!empty($string))
 					$map[$string_id] = $string;
@@ -830,15 +830,15 @@ class DevblocksPlatform extends DevblocksEngine {
 			unset($obj_string_loc);
 			unset($map_en);
 			unset($map_loc);
-			
+
 			// Cache with tag (tag allows easy clean for multiple langs at once)
 			$cache->save($map,self::CACHE_TAG_TRANSLATIONS.'_'.$locale,array(self::CACHE_TAG_TRANSLATIONS));
 	    }
-	    
+
 		$translate = _DevblocksTranslationManager::getInstance();
 		$translate->addLocale($locale, $map);
 		$translate->setLocale($locale);
-	    
+
 		Zend_Registry::set('Devblocks:getTranslationService:'.$locale, $translate);
 
 	    return $translate;
@@ -879,7 +879,7 @@ class DevblocksPlatform extends DevblocksEngine {
 	/**
 	 * Initializes the plugin platform (paths, etc).
 	 *
-	 * @static 
+	 * @static
 	 * @return void
 	 */
 	static function init() {
@@ -888,15 +888,16 @@ class DevblocksPlatform extends DevblocksEngine {
 			self::$start_memory = memory_get_usage();
 			self::$start_peak_memory = memory_get_peak_usage();
 		}
-		
-	    // [JAS]: [TODO] Do we need an explicit init() call?
+
+      // Encoding (mbstring)
+      mb_internal_encoding(LANG_CHARSET_CODE);
 	    // [JAS] [MDF]: Automatically determine the relative webpath to Devblocks files
 	    if(!defined('DEVBLOCKS_WEBPATH')) {
 	        $php_self = $_SERVER["PHP_SELF"];
-	        
+
 		    @$proxyhost = $_SERVER['HTTP_DEVBLOCKSPROXYHOST'];
 		    @$proxybase = $_SERVER['HTTP_DEVBLOCKSPROXYBASE'];
-        
+
             if(!empty($proxybase)) {
                 $php_self = $proxybase . '/';
             } elseif(DEVBLOCKS_REWRITE) {
@@ -907,7 +908,7 @@ class DevblocksPlatform extends DevblocksEngine {
 	            if(false === $pos) $pos = strrpos($php_self,'ajax.php');
 	            $php_self = substr($php_self,0,$pos);
 	        }
-	        
+
 	        @define('DEVBLOCKS_WEBPATH',$php_self);
 	    }
 	}
@@ -916,12 +917,12 @@ class DevblocksPlatform extends DevblocksEngine {
 //		if(!empty($class) && class_exists($class, true))
 //			self::$pluginDelegate = $class;
 //	}
-	
+
 	static function setExtensionDelegate($class) {
 		if(!empty($class) && class_exists($class, true))
 			self::$extensionDelegate = $class;
 	}
-	
+
 	static function redirect(DevblocksHttpIO $httpIO) {
 		$url_service = self::getUrlService();
 		session_write_close();
@@ -933,13 +934,13 @@ class DevblocksPlatform extends DevblocksEngine {
 
 // [TODO] This doesn't belong! (ENGINE)
 class PlatformPatchContainer extends DevblocksPatchContainerExtension {
-	
+
 	function __construct() {
 		parent::__construct(null);
-		
+
 		/*
 		 * [JAS]: Just add a build number here (from your commit revision) and write a
-		 * case in runBuild().  You should comment the milestone next to your build 
+		 * case in runBuild().  You should comment the milestone next to your build
 		 * number.
 		 */
 
