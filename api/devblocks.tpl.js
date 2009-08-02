@@ -294,15 +294,6 @@ function genericAjaxPanel(request,target,modal,width,cb) {
 	if(true == modal) options.fixedcenter = true;
 //	if(true != modal) options.draggable = true;
 
-	genericPanel = new YAHOO.widget.Panel("genericPanel", options);
-	genericPanel.setHeader('Loading...');
-{/literal}
-	genericPanel.setBody('<div><p align="center"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/ajax_loading.gif{/devblocks_url}" /></p></div>');
-{literal}
-	genericPanel.render(document.body);
-	genericPanel.center();
-	genericPanel.show();
-
 	var cObj = YAHOO.util.Connect.asyncRequest('GET', DevblocksAppPath+'ajax.php?'+request, {
 			success: function(o) {
 				var caller = o.argument.caller;
@@ -310,7 +301,8 @@ function genericAjaxPanel(request,target,modal,width,cb) {
 				var options = o.argument.options;
 				var callback = o.argument.cb;
 
- 				genericPanel.hideEvent.subscribe(function(type,args,me) {
+       genericPanel = new YAHOO.widget.Panel("genericPanel", options);
+       genericPanel.hideEvent.subscribe(function(type,args,me) {
 					try {
 						setTimeout(function(){
 							genericPanel.destroy();
@@ -320,15 +312,21 @@ function genericAjaxPanel(request,target,modal,width,cb) {
 				});
 
 				genericPanel.setHeader('&nbsp;');
- 				genericPanel.setBody(o.responseText);
+        genericPanel.setBody('');
+        genericPanel.render(document.body);
+
+        genericPanel.hide();
+        genericPanel.setBody(o.responseText);
 
 				if(null != target && !options.fixedcenter) {
 					genericPanel.cfg.setProperty('context',[target,"bl","tl"]);
 				} else {
 					genericPanel.center();
 				}
+
 				try { callback(o); } catch(e) {}
 
+        genericPanel.show();
 			},
 			failure: function(o) {},
 			argument:{request:request,target:target,options:options,cb:cb}
@@ -422,7 +420,7 @@ function genericAjaxPost(formName,divName,args,cb) {
 			null
 	);
 	YAHOO.util.Connect.setForm(0);
-}
+ }
 
 {/literal}
--->
+--->
