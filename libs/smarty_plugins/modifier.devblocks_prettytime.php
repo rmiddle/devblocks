@@ -2,10 +2,13 @@
 function smarty_modifier_devblocks_prettytime($string, $format=null) {
 	if(empty($string) || !is_numeric($string))
 		return '';
-	
+
+//  $date = DevblocksPlatform::getDateService();
+//  echo $date->formatTime($format, $string);
+
 	$diffsecs = time() - intval($string);
-	$whole = '';		
-	
+	$whole = '';
+
 	// The past
 	if($diffsecs >= 0) {
 		if($diffsecs >= 86400) { // days
@@ -28,7 +31,7 @@ function smarty_modifier_devblocks_prettytime($string, $format=null) {
 			$whole = $diffsecs.'s';
 		}
 	}
-	
+
 	echo $whole;
 };
 ?>
