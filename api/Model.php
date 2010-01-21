@@ -394,14 +394,14 @@ class DevblocksExtensionManifest {
 	 * @param integer $instance_id
 	 * @return object
 	 */
-	function createInstance($instance_id=1) {
+	function createInstance() {
 		if(empty($this->id) || empty($this->plugin_id)) // empty($instance_id) || 
 			return null;
 
 		if(null == ($plugin = DevblocksPlatform::getPlugin($this->plugin_id)))
 			return;
 
-		$class_file = DEVBLOCKS_PLUGIN_PATH . $plugin->dir . '/' . $this->file;
+		$class_file = APP_PATH . '/' . $plugin->dir . '/' . $this->file;
 		$class_name = $this->class;
 
 		DevblocksPlatform::registerClasses($class_file,array($class_name));
@@ -410,7 +410,7 @@ class DevblocksExtensionManifest {
 			return null;
 		}
 		
-		$instance = new $class_name($this,$instance_id);
+		$instance = new $class_name($this);
 		return $instance;
 	}
 	

@@ -4,9 +4,7 @@ include_once(DEVBLOCKS_PATH . "api/Model.php");
 include_once(DEVBLOCKS_PATH . "api/DAO.php");
 include_once(DEVBLOCKS_PATH . "api/Extension.php");
 
-//include_once(DEVBLOCKS_PATH . "libs/cloudglue/CloudGlue.php");
-
-define('PLATFORM_BUILD',302);
+define('PLATFORM_BUILD',305);
 
 /**
  *  @defgroup core Devblocks Framework Core
@@ -30,16 +28,16 @@ define('PLATFORM_BUILD',302);
  * @author Jeff Standen <jeff@webgroupmedia.com>
  */
 class DevblocksPlatform extends DevblocksEngine {
-    const CACHE_POINTS = 'devblocks_points';
-    const CACHE_PLUGINS = 'devblocks_plugins';
-    const CACHE_EXTENSIONS = 'devblocks_extensions';
-    const CACHE_TABLES = 'devblocks_tables';
-    const CACHE_TAG_TRANSLATIONS = 'devblocks_translations';
+    const CACHE_ACL = 'devblocks_acl';
     const CACHE_EVENT_POINTS = 'devblocks_event_points';
     const CACHE_EVENTS = 'devblocks_events';
-    const CACHE_ACL = 'devblocks_acl';
+    const CACHE_EXTENSIONS = 'devblocks_extensions';
+    const CACHE_PLUGINS = 'devblocks_plugins';
+    const CACHE_POINTS = 'devblocks_points';
+    const CACHE_SETTINGS = 'devblocks_settings';
+    const CACHE_TABLES = 'devblocks_tables';
+    const CACHE_TAG_TRANSLATIONS = 'devblocks_translations';
 
-//    static private $pluginDelegate = null;
     static private $extensionDelegate = null;
 
     static private $start_time = 0;
@@ -154,13 +152,14 @@ class DevblocksPlatform extends DevblocksEngine {
 	 */
 	static function clearCache() {
 	    $cache = self::getCacheService(); /* @var $cache Zend_Cache_Core */
+	    $cache->remove(self::CACHE_ACL);
 	    $cache->remove(self::CACHE_PLUGINS);
-	    $cache->remove(self::CACHE_EXTENSIONS);
-	    $cache->remove(self::CACHE_POINTS);
 	    $cache->remove(self::CACHE_EVENT_POINTS);
 	    $cache->remove(self::CACHE_EVENTS);
+	    $cache->remove(self::CACHE_EXTENSIONS);
+	    $cache->remove(self::CACHE_POINTS);
+	    $cache->remove(self::CACHE_SETTINGS);
 	    $cache->remove(self::CACHE_TABLES);
-	    $cache->remove(self::CACHE_ACL);
 	    $cache->remove(_DevblocksClassLoadManager::CACHE_CLASS_MAP);
 
 	    // Clear all locale caches
@@ -590,7 +589,7 @@ class DevblocksPlatform extends DevblocksEngine {
 		    @$plugin->class = $rs->fields['class'];
 		    @$plugin->dir = $rs->fields['dir'];
 
-		    if(file_exists(DEVBLOCKS_PLUGIN_PATH . $plugin->dir . DIRECTORY_SEPARATOR . 'plugin.xml')) {
+		    if(file_exists(APP_PATH . DIRECTORY_SEPARATOR . $plugin->dir . DIRECTORY_SEPARATOR . 'plugin.xml')) {
 		        $plugins[$plugin->id] = $plugin;
 		    }
 
@@ -640,32 +639,42 @@ class DevblocksPlatform extends DevblocksEngine {
 	}
 
 	/**
-	 * Reads and caches manifests from the plugin directory.
+	 * Reads and caches manifests from the features + plugins directories.
 	 *
 	 * @static
 	 * @return DevblocksPluginManifest[]
 	 */
 	static function readPlugins() {
-	    $dir = DEVBLOCKS_PLUGIN_PATH;
+		$scan_dirs = array(
+			'features',
+			'storage/plugins',
+		);
+		
 	    $plugins = array();
 
-	    if (is_dir($dir)) {
-	        if ($dh = opendir($dir)) {
-	            while (($file = readdir($dh)) !== false) {
-	                if($file=="." || $file == ".." || 0 == strcasecmp($file,"CVS"))
-	                continue;
-
-	                $path = $dir . '/' . $file;
-	                if(is_dir($path) && file_exists($path.'/plugin.xml')) {
-	                    $manifest = self::_readPluginManifest($file); /* @var $manifest DevblocksPluginManifest */
-
-	                    if(null != $manifest) {
-	                        $plugins[] = $manifest;
-	                    }
-	                }
-	            }
-	            closedir($dh);
-	        }
+	    if(is_array($scan_dirs))
+	    foreach($scan_dirs as $scan_dir) {
+	    	$scan_path = APP_PATH . '/' . $scan_dir;
+		    if (is_dir($scan_path)) {
+		        if ($dh = opendir($scan_path)) {
+		            while (($file = readdir($dh)) !== false) {
+		                if($file=="." || $file == "..")
+		                	continue;
+		                	
+		                $plugin_path = $scan_path . '/' . $file;
+		                $rel_path = $scan_dir . '/' . $file;
+		                
+		                if(is_dir($plugin_path) && file_exists($plugin_path.'/plugin.xml')) {
+		                    $manifest = self::_readPluginManifest($rel_path); /* @var $manifest DevblocksPluginManifest */
+	
+		                    if(null != $manifest) {
+		                        $plugins[] = $manifest;
+		                    }
+		                }
+		            }
+		            closedir($dh);
+		        }
+		    }
 	    }
 
 		// [TODO] Instance the plugins in dependency order
@@ -674,6 +683,13 @@ class DevblocksPlatform extends DevblocksEngine {
 	    DevblocksPlatform::clearCache();
 
 	    return $plugins;
+	}
+
+	/**
+	 * @return _DevblocksPluginSettingsManager
+	 */
+	static function getPluginSettingsService() {
+		return _DevblocksPluginSettingsManager::getInstance();
 	}
 
 	/**
@@ -705,15 +721,6 @@ class DevblocksPlatform extends DevblocksEngine {
 	static function getPatchService() {
 	    return _DevblocksPatchManager::getInstance();
 	}
-
-	/**
-	 * Enter description here...
-	 *
-	 * @return CloudGlue
-	 */
-//	static function getCloudGlueService() {
-//	    return CloudGlue::getInstance();
-//	}
 
 	/**
 	 * @return _DevblocksUrlManager
@@ -762,6 +769,13 @@ class DevblocksPlatform extends DevblocksEngine {
 	 */
 	static function getTemplateService() {
 	    return _DevblocksTemplateManager::getInstance();
+	}
+
+	/**
+	 * @return _DevblocksTemplateBuilder
+	 */
+	static function getTemplateBuilder() {
+	    return _DevblocksTemplateBuilder::getInstance();
 	}
 
 	/**
@@ -957,5 +971,6 @@ class PlatformPatchContainer extends DevblocksPatchContainerExtension {
 		$this->registerPatch(new DevblocksPatch('devblocks.core',1,$file_prefix.'1.0.0.php',''));
 		$this->registerPatch(new DevblocksPatch('devblocks.core',253,$file_prefix.'1.0.0_beta.php',''));
 		$this->registerPatch(new DevblocksPatch('devblocks.core',290,$file_prefix.'1.1.0.php',''));
+		$this->registerPatch(new DevblocksPatch('devblocks.core',294,$file_prefix.'2.0.0.php',''));
 	}
 };

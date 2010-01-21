@@ -23,32 +23,32 @@ abstract class DevblocksEngine {
 	 *
 	 * @static
 	 * @private
-	 * @param string $file
+	 * @param string $dir
 	 * @return DevblocksPluginManifest
 	 */
-	static protected function _readPluginManifest($dir) {
-		if(!file_exists(DEVBLOCKS_PLUGIN_PATH.$dir.'/plugin.xml'))
+	static protected function _readPluginManifest($rel_dir) {
+		$manifest_file = APP_PATH . '/' . $rel_dir . '/plugin.xml'; 
+		
+		if(!file_exists($manifest_file))
 			return NULL;
 
-		$plugin = simplexml_load_file(DEVBLOCKS_PLUGIN_PATH.$dir.'/plugin.xml');
+		$plugin = simplexml_load_file($manifest_file);
 		$prefix = (APP_DB_PREFIX != '') ? APP_DB_PREFIX.'_' : ''; // [TODO] Cleanup
 
 		$manifest = new DevblocksPluginManifest();
 		$manifest->id = (string) $plugin->id;
-		$manifest->dir = $dir;
+		$manifest->dir = $rel_dir;
 		$manifest->description = (string) $plugin->description;
 		$manifest->author = (string) $plugin->author;
 		$manifest->revision = (integer) $plugin->revision;
 		$manifest->link = (string) $plugin->link;
 		$manifest->name = (string) $plugin->name;
-        $manifest->file = (string) $plugin->class->file;
-        $manifest->class = (string) $plugin->class->name;
 
-        // [TODO] Check that file + class exist
 		// [TODO] Clear out any removed plugins/classes/exts?
 
 		$db = DevblocksPlatform::getDatabaseService();
-		if(is_null($db)) return;
+		if(is_null($db)) 
+			return;
 
 		// Manifest
 		$db->Replace(
@@ -60,8 +60,6 @@ abstract class DevblocksEngine {
 				'author' => $db->qstr($manifest->author),
 				'revision' => $manifest->revision,
 				'link' => $db->qstr($manifest->link),
-				'file' => $db->qstr($manifest->file),
-				'class' => $db->qstr($manifest->class),
 				'dir' => $db->qstr($manifest->dir)
 			),
 			array('id'),
@@ -399,12 +397,14 @@ abstract class DevblocksEngine {
 	    $path = $parts;
 		switch(array_shift($path)) {
 		    case "resource":
-			    // [TODO] Set the mime-type/filename in response headers
-			    $plugin = array_shift($path);
+			    $plugin_id = array_shift($path);
+			    if(null == ($plugin = DevblocksPlatform::getPlugin($plugin_id)))
+			    	break;
+			    
 			    $file = implode(DIRECTORY_SEPARATOR, $path); // combine path
-		        $dir = DEVBLOCKS_PLUGIN_PATH . $plugin . DIRECTORY_SEPARATOR . 'resources';
+		        $dir = APP_PATH . '/' . $plugin->dir . '/' . 'resources';
 		        if(!is_dir($dir)) die(""); // basedir Security
-		        $resource = $dir . DIRECTORY_SEPARATOR . $file;
+		        $resource = $dir . '/' . $file;
 		        if(0 != strstr($dir,$resource)) die("");
 		        $ext = @array_pop(explode('.', $resource));
 		        if(!is_file($resource) || 'php' == $ext) die(""); // extension security
@@ -520,22 +520,65 @@ abstract class DevblocksEngine {
 
 		return;
 	}
+};
 
+class _DevblocksPluginSettingsManager {
+	private static $_instance = null;
+	private $_settings = array();
+	
 	/**
-	 * Prints out the Platform Javascript Library for use by Application.
-	 * This library provides the ability to rewrite URLs in Javascript for
-	 * Ajax functionality, etc.
-	 *
-	 * @example
-	 * <script language="javascript" type="text/javascript">{php}DevblocksPlatform::printJavascriptLibrary();{/php}</script>
+	 * @return _DevblocksPluginSettingsManager
 	 */
-	static function printJavascriptLibrary() {
-		$tpl = DevblocksPlatform::getTemplateService();
-		$path = dirname(__FILE__);
-		$tpl->caching = 0;
-		$tpl->display("file:$path/devblocks.tpl.js");
+	private function __construct() {
+	    // Defaults (dynamic)
+		$plugin_settings = DAO_DevblocksSetting::getSettings();
+		foreach($plugin_settings as $plugin_id => $kv) {
+			if(!isset($this->_settings[$plugin_id]))
+				$this->_settings[$plugin_id] = array();
+				
+			if(is_array($kv))
+			foreach($kv as $k => $v)
+				$this->_settings[$plugin_id][$k] = $v;
+		}
 	}
-}
+	
+	/**
+	 * @return _DevblocksPluginSettingsManager
+	 */
+	public static function getInstance() {
+		if(self::$_instance==null) {
+			self::$_instance = new _DevblocksPluginSettingsManager();	
+		}
+		
+		return self::$_instance;		
+	}
+	
+	public function set($plugin_id,$key,$value) {
+		DAO_DevblocksSetting::set($plugin_id,$key,$value);
+		
+		if(!isset($this->_settings[$plugin_id]))
+			$this->_settings[$plugin_id] = array();
+		
+		$this->_settings[$plugin_id][$key] = $value;
+		
+	    $cache = DevblocksPlatform::getCacheService();
+		$cache->remove(DevblocksPlatform::CACHE_SETTINGS);
+		
+		return TRUE;
+	}
+	
+	/**
+	 * @param string $key
+	 * @param string $default
+	 * @return mixed
+	 */
+	public function get($plugin_id,$key,$default=null) {
+		if(isset($this->_settings[$plugin_id][$key]))
+			return $this->_settings[$plugin_id][$key];
+		else 
+			return $default;
+	}
+};
 
 /**
  * Session Management Singleton
@@ -1916,19 +1959,170 @@ class _DevblocksTemplateManager {
 	static function getInstance() {
 		static $instance = null;
 		if(null == $instance) {
+			define('SMARTY_RESOURCE_CHAR_SET', LANG_CHARSET_CODE);
 			require(DEVBLOCKS_PATH . 'libs/smarty/Smarty.class.php');
+
 			$instance = new Smarty();
-			$instance->template_dir = APP_PATH . '/templates'; // [TODO] Themes
+			
+			$instance->template_dir = APP_PATH . '/templates';
 			$instance->compile_dir = APP_TEMP_PATH . '/templates_c';
 			$instance->cache_dir = APP_TEMP_PATH . '/cache';
-			$instance->plugins_dir = DEVBLOCKS_PATH . 'libs/smarty_plugins';
 
-			//$smarty->config_dir = DEVBLOCKS_PATH. 'configs';
 			$instance->caching = 0;
 			$instance->cache_lifetime = 0;
+			
+			// Devblocks plugins
+			$instance->register_block('devblocks_url', array(_DevblocksTemplateManager, 'block_devblocks_url'));
+			$instance->register_modifier('devblocks_date', array(_DevblocksTemplateManager, 'modifier_devblocks_date'));
+			$instance->register_modifier('devblocks_prettytime', array(_DevblocksTemplateManager, 'modifier_devblocks_prettytime'));
+			$instance->register_modifier('devblocks_translate', array(_DevblocksTemplateManager, 'modifier_devblocks_translate'));
 		}
 		return $instance;
 	}
+	
+	static function modifier_devblocks_translate($string) {
+		$translate = DevblocksPlatform::getTranslationService();
+		
+		// Variable number of arguments
+		$args = func_get_args();
+		array_shift($args); // pop off $string
+		
+		$translated = $translate->_($string);
+		$translated = @vsprintf($translated,$args);
+		return $translated;
+	}
+	
+	static function block_devblocks_url($params, $content, $smarty, $repeat, $smarty_tpl) {
+		$url = DevblocksPlatform::getUrlService();
+		
+		$contents = $url->write($content, !empty($params['full']) ? true : false);
+		
+	    if (!empty($params['assign'])) {
+	        $smarty->assign($params['assign'], $contents);
+	    } else {
+	        return $contents;
+	    }
+	}
+	
+	static function modifier_devblocks_date($string, $format=null) {
+		if(empty($string))
+			return '';
+	
+		$date = DevblocksPlatform::getDateService();
+		return $date->formatTime($format, $string);
+	}
+	
+	static function modifier_devblocks_prettytime($string, $format=null) {
+		if(empty($string) || !is_numeric($string))
+			return '';
+		
+		$diffsecs = time() - intval($string);
+		$whole = '';		
+		
+		// The past
+		if($diffsecs >= 0) {
+			if($diffsecs >= 86400) { // days
+				$whole = floor($diffsecs/86400).'d ago';
+			} elseif($diffsecs >= 3600) { // hours
+				$whole = floor($diffsecs/3600).'h ago';
+			} elseif($diffsecs >= 60) { // mins
+				$whole = floor($diffsecs/60).'m ago';
+			} elseif($diffsecs >= 0) { // secs
+				$whole = $diffsecs.'s ago';
+			}
+		} else { // The future
+			if($diffsecs <= -86400) { // days
+				$whole = floor($diffsecs/-86400).'d';
+			} elseif($diffsecs <= -3600) { // hours
+				$whole = floor($diffsecs/-3600).'h';
+			} elseif($diffsecs <= -60) { // mins
+				$whole = floor($diffsecs/-60).'m';
+			} elseif($diffsecs <= 0) { // secs
+				$whole = $diffsecs.'s';
+			}
+		}
+		
+		echo $whole;
+}	
+};
+
+class _DevblocksTemplateBuilder {
+	private $_tpl = null;
+	private $_errors = array();
+	
+	private function _DevblocksTemplateBuilder() {
+		$this->_tpl = DevblocksPlatform::getTemplateService();
+	}
+	
+	/**
+	 * 
+	 * @return _DevblocksTemplateBuilder
+	 */
+	static function getInstance() {
+		static $instance = null;
+		if(null == $instance) {
+			$instance = new _DevblocksTemplateBuilder();
+		}
+		return $instance;
+	}
+
+	function _smarty_get_template($tpl_name, &$tpl_source, &$smarty) {
+		$tpl_source = $tpl_name;
+		return true;
+	}
+
+	function _smarty_get_timestamp($tpl_name, &$tpl_timestamp, &$smarty_obj) {
+		$tpl_timestamp = time();
+		return true;
+	}
+	
+	function _smarty_get_secure($tpl_name, &$smarty_obj) {
+		return false;
+	}
+	
+	function _smarty_get_trusted($tpl_name, &$smarty_obj) {
+		return false;
+	}
+	
+	public function getErrors() {
+		return $this->_errors;
+	}
+	
+	private function _setUp() {
+		$this->_errors = array();
+		$this->_tpl->force_compile = true;
+		$this->_tpl->security = true;
+		$this->_tpl->security_settings = array(
+			'PHP_TAGS' => false,
+			'INCLUDE_ANY' => true, 
+		);
+	}
+	
+	private function _tearDown() {
+		$this->_tpl->force_compile = false;
+		$this->_tpl->security = false;
+	}
+	
+	/**
+	 * 
+	 * @param Smarty $tpl
+	 * @param string $template
+	 * @return string
+	 */
+	function build($template) {
+		$this->_setUp();
+		try {
+			$out = $this->_tpl->fetch('string:'.$template);
+		} catch(Exception $e) {
+			$this->_errors[] = $e->getMessage();
+		}
+		$this->_tearDown();
+
+		if(!empty($this->_errors))
+			return false;
+		
+		return $out;
+	} 
 };
 
 /**
