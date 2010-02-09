@@ -10,10 +10,10 @@ var DevblocksClass = function() {
 		} else if (document.getSelection) { //older Mozilla
 			var selectedString = document.getSelection();
 		};
-
+		
 		return selectedString;
 	}
-
+	
 	this.getFormEnabledCheckboxValues = function(form_id,element_name) {
 		// Make sure the view form exists
 		var viewForm = document.getElementById(form_id);
@@ -54,7 +54,7 @@ var DevblocksClass = function() {
 
 		var len = elements.length;
 		var ids = new Array();
-
+		
 		if(null == len && null != elements.selectedIndex) {
 			elements.selectedIndex = 0;
 
@@ -64,7 +64,7 @@ var DevblocksClass = function() {
 			}
 		}
 	}
-
+	
 };
 var Devblocks = new DevblocksClass();
 
@@ -72,42 +72,19 @@ function selectValue(e) {
 	return e.options[e.selectedIndex].value;
 }
 
-function radioValue(e) {
-	var	numBoxes = e.length;
-
-	if(null == e.length) { // single
-		return e.value;
-
-	} else { // multi
-		for(x=0;x<numBoxes;x++) {
-			if(e[x].checked)
-				return e[x].value;
-		}
-	}
-
-	return null;
-}
-
-function clearDiv(divName) {
-	var div = document.getElementById(divName);
-	if(null == div) return;
-
-	div.innerHTML = '';
-}
-
 function interceptInputCRLF(e,cb) {
 	var code = (window.Event) ? e.which : event.keyCode;
-
+	
 	if(null != cb && code == 13) {
 		try { cb(); } catch(e) { }
 	}
-
+	
 	return code != 13;
 }
 
 function getEventTarget(e) {
 	if(!e) e = event;
-
+	
 	if(e.target) {
 		return e.target.nodeName;
 	} else if (e.srcElement) {
@@ -115,26 +92,20 @@ function getEventTarget(e) {
 	}
 }
 
-function toggleClass(divName,c) {
-	var div = document.getElementById(divName);
-	if(null == div) return;
-	div.className = c;
-}
-
 /* From:
  * http://www.webmasterworld.com/forum91/4527.htm
  */
-function setElementSelRange(e, selStart, selEnd) {
-	if (e.setSelectionRange) {
-		e.focus();
-		e.setSelectionRange(selStart, selEnd);
-	} else if (e.createTextRange) {
-		var range = e.createTextRange();
-		range.collapse(true);
-		range.moveEnd('character', selEnd);
-		range.moveStart('character', selStart);
-		range.select();
-	}
+function setElementSelRange(e, selStart, selEnd) { 
+	if (e.setSelectionRange) { 
+		e.focus(); 
+		e.setSelectionRange(selStart, selEnd); 
+	} else if (e.createTextRange) { 
+		var range = e.createTextRange(); 
+		range.collapse(true); 
+		range.moveEnd('character', selEnd); 
+		range.moveStart('character', selStart); 
+		range.select(); 
+	} 
 }
 
 function scrollElementToBottom(e) {
@@ -146,7 +117,7 @@ function toggleDiv(divName,state) {
 	var div = document.getElementById(divName);
 	if(null == div) return;
 	var currentState = div.style.display;
-
+	
 	if(null == state) {
 		if(currentState == "block") {
 			div.style.display = 'none';
@@ -161,10 +132,10 @@ function toggleDiv(divName,state) {
 function checkAll(divName, state) {
 	var div = document.getElementById(divName);
 	if(null == div) return;
-
+	
 	var boxes = div.getElementsByTagName('input');
 	var numBoxes = boxes.length;
-
+	
 	for(x=0;x<numBoxes;x++) {
 		if(null != boxes[x].name) {
 			if(state == null) state = !boxes[x].checked;
@@ -180,7 +151,7 @@ function insertAtCursor(field, value) {
 		sel = document.selection.createRange();
 		sel.text = value;
 		field.focus();
-	}
+	} 
 	else if (field.selectionStart || field.selectionStart == '0') {
 		var startPos = field.selectionStart;
 		var endPos = field.selectionEnd;
@@ -193,210 +164,221 @@ function insertAtCursor(field, value) {
 	}
 	else{
 		field.value += value;
-	}
+	} 
 }
 
 // [JAS]: [TODO] Make this a little more generic?
 function appendTextboxAsCsv(formName, field, oLink) {
 	var frm = document.getElementById(formName);
 	if(null == frm) return;
-
+	
 	var txt = frm.elements[field];
 	var sAppend = '';
-
+	
 	// [TODO]: check that the last character(s) aren't comma or comma space
 	if(0 != txt.value.length && txt.value.substr(-1,1) != ',' && txt.value.substr(-2,2) != ', ')
 		sAppend += ', ';
-
+		
 	sAppend += oLink.innerHTML;
-
+	
 	txt.value = txt.value + sAppend;
 }
 
 var loadingPanel;
 function showLoadingPanel() {
 	if(null != loadingPanel) {
-		loadingPanel.destroy();
-		loadingPanel = null;
+		hideLoadingPanel();
+	}
+	
+	var options = {
+			bgiframe : true,
+			autoOpen : false,
+			closeOnEscape : false,
+			draggable : false,
+			resizable : false,
+			modal : true,
+			width : "300",
+			title : 'Running...'
+		};
+
+	if(0 == $("#loadingPanel").length) {
+		$("body").append("<div id='loadingPanel' style='display:none;'></div>");
 	}
 
-	var options = {
-	  width : "300px",
-	  fixedcenter : true,
-	  visible : false,
-	  constraintoviewport : true,
-	  underlay : "shadow",
-	  modal : true,
-	  close : false,
-	  draggable : false
-	};
-
-	loadingPanel = new YAHOO.widget.Panel("loadingPanel", options);
-
-	loadingPanel.setHeader('Running...');
-	loadingPanel.setBody('');
-	loadingPanel.render(document.body);
-
-	loadingPanel.hide();
-	loadingPanel.setBody("This may take a few moments.  Please wait!");
-	loadingPanel.center();
-
-	loadingPanel.show();
+	// Set the content
+	$("#loadingPanel").html("This may take a few moments.  Please wait!");
+	
+	// Render
+	loadingPanel = $("#loadingPanel").dialog(options);
+	
+	loadingPanel.dialog('open');
 }
 
 function hideLoadingPanel() {
-	loadingPanel.destroy();
+	loadingPanel.unbind();
+	loadingPanel.dialog('destroy');
 	loadingPanel = null;
 }
 
 var genericPanel;
 function genericAjaxPanel(request,target,modal,width,cb) {
+	// Reset
 	if(null != genericPanel) {
-		genericPanel.destroy();
+		genericPanel.unbind();
+		genericPanel.dialog('destroy');
 		genericPanel = null;
 	}
 
+	// Options
 	var options = {
-	  width : "300px",
-	  fixedcenter : false,
-	  visible : false,
-	  constraintoviewport : true,
-	  underlay : "shadow",
-	  modal : false,
-	  close : true,
-	  draggable : true
+		bgiframe : true,
+		autoOpen : false,
+		closeOnEscape : true,
+		draggable : true,
+		modal : false,
+		stack: true,
+		width : "300",
+		close: function(event, ui) { 
+			$(this).unbind();
+		}
 	};
-
+	
 	if(null != width) options.width = width;
 	if(null != modal) options.modal = modal;
-	if(true == modal) options.fixedcenter = true;
-//	if(true != modal) options.draggable = true;
-
-	var cObj = YAHOO.util.Connect.asyncRequest('GET', DevblocksAppPath+'ajax.php?'+request, {
-			success: function(o) {
-				var caller = o.argument.caller;
-				var target = o.argument.target;
-				var options = o.argument.options;
-				var callback = o.argument.cb;
-
-       genericPanel = new YAHOO.widget.Panel("genericPanel", options);
-       genericPanel.hideEvent.subscribe(function(type,args,me) {
-					try {
-						setTimeout(function(){
-							genericPanel.destroy();
-							genericPanel = null;
-						},100);
-					} catch(e) { }
-				});
-
-				genericPanel.setHeader('&nbsp;');
-        genericPanel.setBody('');
-        genericPanel.render(document.body);
-
-        genericPanel.hide();
-        genericPanel.setBody(o.responseText);
-
-				if(null != target && !options.fixedcenter) {
-					genericPanel.cfg.setProperty('context',[target,"bl","tl"]);
-				} else {
-					genericPanel.center();
-				}
-
-				try { callback(o); } catch(e) { }				
-
-        genericPanel.show();
-			},
-			failure: function(o) { },
-			argument: { request:request, target:target, options:options, cb:cb }
+	
+	genericAjaxGet('',request,
+		function(html) {
+			if(0 == $("#genericPanel").length) {
+				$("body").append("<div id='genericPanel' style='display:none;'></div>");
+			}
+			
+			genericPanel = $("#genericPanel");
+			
+			// Set the content
+			genericPanel.html(html);
+			
+			// Target
+			if(null != target) {
+				var offset = $(target).offset();
+				var left = offset.left - $(document).scrollLeft();
+				var top = offset.top - $(document).scrollTop();
+				options.position = [left, top];
+				
+			} else {
+				options.position = [ 'center', 'top' ];
+			}
+			
+			// Render
+			genericPanel.dialog(options);
+			genericPanel.dialog('open');
+			
+			// Focus
+			//if(null != target) {
+				//var offset = $(target).offset();
+				//$(document).scrollTop(offset.top); // Focus
+			//}
+			
+			// Callback
+			try { cb(html); } catch(e) { }
 		}
 	);
 }
 
-function saveGenericAjaxPanel(div,close,cb) {
-	YAHOO.util.Connect.setForm(div);
+function genericAjaxPanelPostCloseReloadView(frm, view_id, has_output) {
+	var has_view = (null != view_id && view_id.length > 0 && $('#view'+view_id).length > 0) ? true : false;
+	if(null == has_output)
+		has_output = false;
 
-	var cObj = YAHOO.util.Connect.asyncRequest('POST', DevblocksAppPath+'ajax.php', {
-			success: function(o) {
-				var callback = o.argument.cb;
-				var close = o.argument.close;
+	if(has_view)
+		$('#view'+view_id).fadeTo("slow", 0.2);
+	
+	genericAjaxPost(frm,view_id,'',
+		function(html) {
+			if(has_view && has_output) { // Reload from post content
+				if(html.length > 0)
+					$('#view'+view_id).html(html);
+			} else if (has_view && !has_output) { // Reload from view_id
+				genericAjaxGet('view'+view_id, 'c=internal&a=viewRefresh&id=' + view_id);
+			}
 
-				if(null != genericPanel && close) {
-					try {
-						genericPanel.destroy();
-						genericPanel = null;
-					} catch(e) { }
-				}
+			if(has_view)
+				$('#view'+view_id).fadeTo("slow", 1.0);
 
-				try { callback(o); } catch(e) { }
-			},
-			failure: function(o) { },
-			argument: { div:div, close:close, cb:cb }
-	});
-
-	YAHOO.util.Connect.setForm(0);
+			if(null != genericPanel) {
+				genericPanel.trigger('devblocks_dialogsaved');
+				
+				try {
+					genericPanel.unbind();
+					genericPanel.dialog('destroy');
+					genericPanel = null;
+				} catch(e) {}
+			}
+		}
+	);
 }
 
 function genericAjaxGet(divName,args,cb) {
+	if(null == divName || 0 == divName.length)
+		divName = 'null';
+
 	if(null == cb) {
-		var frm = document.getElementById(divName);
-
-		if(null != frm) {
-			var anim = new YAHOO.util.Anim(frm, { opacity: { to: 0.2 } }, 1, YAHOO.util.Easing.easeOut);
-			anim.animate();
-		}
-
-		var cb = function(o) {
-			var frm = document.getElementById(divName);
-			if(null == frm) return;
-			frm.innerHTML = o.responseText;
-
-			var anim = new YAHOO.util.Anim(frm, { opacity: { to: 1.0 } }, 1, YAHOO.util.Easing.easeOut);
-			anim.animate();
+		$('#'+divName).fadeTo("slow", 0.2);
+		
+		var cb = function(html) {
+			$('#'+divName).html(html);
+			$('#'+divName).fadeTo("slow", 1.0);
 		}
 	}
-
-	var cObj = YAHOO.util.Connect.asyncRequest('GET', DevblocksAppPath+'ajax.php?'+args, {
-		success: cb,
-		failure: function(o) { },
-		argument: { caller:this, divName:divName }
-		}
-	);
+	
+	$.ajax( {
+		type: "GET",
+		url: DevblocksAppPath+'ajax.php?'+args,
+		cache: false,
+		success : cb, 
+	} );
 }
 
-var genericAjaxPostAfterSubmitEvent = new YAHOO.util.CustomEvent("genericAjaxPostAfterSubmitEvent", window);
-
 function genericAjaxPost(formName,divName,args,cb) {
-	var frm = document.getElementById(formName);
+	if(null == divName || 0 == divName.length)
+		divName = 'null';
+	
 	if(null == cb) {
-		var div = document.getElementById(divName);
-
-		if(null != div) {
-			var anim = new YAHOO.util.Anim(div, { opacity: { to: 0.2 } }, 1, YAHOO.util.Easing.easeOut);
-			anim.animate();
-		}
-
-		var cb = function(o) {
-			// Events
-			genericAjaxPostAfterSubmitEvent.fire();
-			genericAjaxPostAfterSubmitEvent.unsubscribeAll();
-
-			var div = document.getElementById(divName);
-			if(null == div) return;
-			div.innerHTML = o.responseText;
-
-			var anim = new YAHOO.util.Anim(div, { opacity: { to: 1.0 } }, 1, YAHOO.util.Easing.easeOut);
-			anim.animate();
+		$('#'+divName).fadeTo("slow", 0.2);
+		
+		var cb = function(html) {
+			$('#'+divName).html(html);
+			$('#'+divName).fadeTo("slow", 1.0);
 		};
 	}
 
-	YAHOO.util.Connect.setForm(frm);
-	var cObj = YAHOO.util.Connect.asyncRequest('POST', DevblocksAppPath+'ajax.php'+(null!=args?('?'+args):''), {
-			success: cb,
-			failure: function(o) { },
-			argument: { caller:this,divName:divName }
-			},
-			null
-	);
-	YAHOO.util.Connect.setForm(0);
- }
+	$.ajax( {
+		type: "POST",
+		url: DevblocksAppPath+'ajax.php'+(null!=args?('?'+args):''),
+		data: $('#'+formName).serialize(),
+		cache: false,
+		success: cb 
+	} );
+}
 
+function devblocksAjaxDateChooser(field, div, options) {
+	if(null == options)
+		options = { 
+			changeMonth: true,
+			changeYear: true
+		} ;
+	
+	if(null == options.dateFormat)
+		options.dateFormat = 'DD, d MM yy';
+			
+	if(null == div) {
+		var chooser = $(field).datepicker(options);
+		
+	} else {
+		if(null == options.onSelect)
+			options.onSelect = function(dateText, inst) {
+				$(field).val(dateText);
+				chooser.datepicker('destroy');					
+			};
+		var chooser = $(div).datepicker(options);
+	}
+}
