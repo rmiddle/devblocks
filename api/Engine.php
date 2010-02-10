@@ -1,6 +1,4 @@
 <?php
-$path = DEVBLOCKS_PATH . 'libs/zend_framework/Zend/';
-require_once($path.'Cache.php');
 require_once(DEVBLOCKS_PATH . 'libs/swift/swift_required.php');
 
 function devblocks_autoload($className) {
@@ -11,17 +9,17 @@ spl_autoload_register('devblocks_autoload');
 
 /**
  * Description
- *
+ * 
  * @ingroup core
  */
 abstract class DevblocksEngine {
 	protected static $request = null;
 	protected static $response = null;
-
+	
 	/**
 	 * Reads and caches a single manifest from a given plugin directory.
-	 *
-	 * @static
+	 * 
+	 * @static 
 	 * @private
 	 * @param string $dir
 	 * @return DevblocksPluginManifest
@@ -31,10 +29,10 @@ abstract class DevblocksEngine {
 		
 		if(!file_exists($manifest_file))
 			return NULL;
-
+		
 		$plugin = simplexml_load_file($manifest_file);
 		$prefix = (APP_DB_PREFIX != '') ? APP_DB_PREFIX.'_' : ''; // [TODO] Cleanup
-
+				
 		$manifest = new DevblocksPluginManifest();
 		$manifest->id = (string) $plugin->id;
 		$manifest->dir = $rel_dir;
@@ -45,11 +43,11 @@ abstract class DevblocksEngine {
 		$manifest->name = (string) $plugin->name;
 
 		// [TODO] Clear out any removed plugins/classes/exts?
-
+        
 		$db = DevblocksPlatform::getDatabaseService();
 		if(is_null($db)) 
 			return;
-
+		
 		// Templates
 		if(isset($plugin->templates)) {
 			foreach($plugin->templates as $eTemplates) {
@@ -82,13 +80,13 @@ abstract class DevblocksEngine {
 			array('id'),
 			false
 		);
-
+		
 		// Class Loader
 		if(isset($plugin->class_loader->file)) {
 			foreach($plugin->class_loader->file as $eFile) {
 				@$sFilePath = (string) $eFile['path'];
 				$manifest->class_loader[$sFilePath] = array();
-
+				
 				if(isset($eFile->class))
 				foreach($eFile->class as $eClass) {
 					@$sClassName = (string) $eClass['name'];
@@ -96,7 +94,7 @@ abstract class DevblocksEngine {
 				}
 			}
 		}
-
+		
 		// Routing
 		if(isset($plugin->uri_routing->uri)) {
 			foreach($plugin->uri_routing->uri as $eUri) {
@@ -105,76 +103,76 @@ abstract class DevblocksEngine {
 				$manifest->uri_routing[$sUriName] = $sController;
 			}
 		}
-
+		
 		// ACL
 		if(isset($plugin->acl->priv)) {
 			foreach($plugin->acl->priv as $ePriv) {
 				@$sId = (string) $ePriv['id'];
 				@$sLabel = (string) $ePriv['label'];
-
+				
 				if(empty($sId) || empty($sLabel))
 					continue;
-
+					
 				$priv = new DevblocksAclPrivilege();
 				$priv->id = $sId;
 				$priv->plugin_id = $manifest->id;
 				$priv->label = $sLabel;
-
+				
 				$manifest->acl_privs[$priv->id] = $priv;
 			}
 			asort($manifest->acl_privs);
 		}
-
+		
 		// Event points
 		if(isset($plugin->event_points->event)) {
 		    foreach($plugin->event_points->event as $eEvent) {
 		        $sId = (string) $eEvent['id'];
 		        $sName = (string) $eEvent->name;
-
+		        
 		        if(empty($sId) || empty($sName))
 		            continue;
-
+		        
 		        $point = new DevblocksEventPoint();
 		        $point->id = $sId;
 		        $point->plugin_id = $plugin->id;
 		        $point->name = $sName;
 		        $point->params = array();
-
+		        
 		        if(isset($eEvent->param)) {
 		            foreach($eEvent->param as $eParam) {
-		                $key = (string) $eParam['key'];
-		                $val = (string) $eParam['value'];
+		                $key = (string) $eParam['key']; 
+		                $val = (string) $eParam['value']; 
 		                $point->param[$key] = $val;
 		            }
 		        }
-
+		        
 		        $manifest->event_points[] = $point;
 		    }
 		}
-
+		
 		// Extensions
 		if(isset($plugin->extensions->extension)) {
 		    foreach($plugin->extensions->extension as $eExtension) {
 		        $sId = (string) $eExtension->id;
 		        $sName = (string) $eExtension->name;
-
+		        
 		        if(empty($sId) || empty($sName))
 		            continue;
-
+		        
 		        $extension = new DevblocksExtensionManifest();
-
+		        
 		        $extension->id = $sId;
 		        $extension->plugin_id = $manifest->id;
 		        $extension->point = (string) $eExtension['point'];
 		        $extension->name = $sName;
 		        $extension->file = (string) $eExtension->class->file;
 		        $extension->class = (string) $eExtension->class->name;
-
+		        
 		        if(isset($eExtension->params->param)) {
 		            foreach($eExtension->params->param as $eParam) {
 				$key = (string) $eParam['key'];
 		                if(isset($eParam->value)) {
-					// [JSJ]: If there is a child of the param tag named value, then this
+					// [JSJ]: If there is a child of the param tag named value, then this 
 					//        param has multiple values and thus we need to grab them all.
 					foreach($eParam->value as $eValue) {
 						// [JSJ]: If there is a child named data, then this is a complex structure
@@ -203,7 +201,7 @@ abstract class DevblocksEngine {
 				}
 		            }
 		        }
-
+		        
 		        $manifest->extensions[] = $extension;
 		    }
 		}
@@ -230,9 +228,9 @@ abstract class DevblocksEngine {
 			);
 			$new_extensions[$extension->id] = true;
 		}
-
+		
 		/*
-		 * Compare our loaded XML manifest to the DB manifest cache and invalidate
+		 * Compare our loaded XML manifest to the DB manifest cache and invalidate 
 		 * the cache for extensions that are no longer in the XML.
 		 */
 		$sql = sprintf("SELECT id FROM %sextension WHERE plugin_id = %s",
@@ -245,9 +243,9 @@ abstract class DevblocksEngine {
 			$plugin_ext_id = $rs_plugin_extensions->fields['id'];
 			if(!isset($new_extensions[$plugin_ext_id]))
 				DAO_Platform::deleteExtension($plugin_ext_id);
-			$rs_plugin_extensions->MoveNext();
+			$rs_plugin_extensions->MoveNext(); 
 		}
-
+		
         // [JAS]: [TODO] Extension point caching
 
 		// Class loader cache
@@ -267,7 +265,7 @@ abstract class DevblocksEngine {
 				false
 			);
 		}
-
+		
 		// URI routing cache
 		$db->Execute(sprintf("DELETE FROM %suri_routing WHERE plugin_id = %s",$prefix,$db->qstr($plugin->id)));
 		if(is_array($manifest->uri_routing))
@@ -299,7 +297,7 @@ abstract class DevblocksEngine {
 				false
 			);
 		}
-
+		
         // [JAS]: Event point caching
 		if(is_array($manifest->event_points))
 		foreach($manifest->event_points as $event) { /* @var $event DevblocksEventPoint */
@@ -315,13 +313,13 @@ abstract class DevblocksEngine {
 				false
 			);
 		}
-
+		
 		return $manifest;
 	}
-
+	
 	static function getWebPath() {
 		$location = "";
-
+		
 		// Read the relative URL into an array
 		if(isset($_SERVER['HTTP_X_REWRITE_URL'])) { // IIS Rewrite
 			$location = $_SERVER['HTTP_X_REWRITE_URL'];
@@ -332,12 +330,12 @@ abstract class DevblocksEngine {
 		} elseif(isset($_SERVER['ORIG_PATH_INFO'])) { // IIS + CGI
 			$location = $_SERVER['ORIG_PATH_INFO'];
 		}
-
+		
 		return $location;
 	}
-
+	
 	/**
-	 * Return a string as a regular expression, parsing * into a non-greedy
+	 * Return a string as a regular expression, parsing * into a non-greedy 
 	 * wildcard, etc.
 	 *
 	 * @param string $arg
@@ -345,14 +343,14 @@ abstract class DevblocksEngine {
 	 */
 	static function strToRegExp($arg, $is_partial=false) {
 		$arg = str_replace(array('*'),array('__WILD__'),$arg);
-
+		
 		return sprintf("/%s%s%s/i",
 			($is_partial ? '' : '^'),
 			str_replace(array('__WILD__','/'),array('.*?','\/'),preg_quote($arg)),
 			($is_partial ? '' : '$')
 		);
 	}
-
+	
 	/**
 	 * Return a string with only its alphanumeric characters
 	 *
@@ -362,7 +360,7 @@ abstract class DevblocksEngine {
 	static function strAlphaNum($arg) {
 		return preg_replace("/[^A-Z0-9\.]/i","", $arg);
 	}
-
+	
 	/**
 	 * Return a string with only its alphanumeric characters or punctuation
 	 *
@@ -372,23 +370,23 @@ abstract class DevblocksEngine {
 	static function strAlphaNumDash($arg) {
 		return preg_replace("/[^A-Z0-9_\-\.]/i","", $arg);
 	}
-
+	
 	/**
 	 * Reads the HTTP Request object.
-	 *
+	 * 
 	 * @return DevblocksHttpRequest
 	 */
 	static function readRequest() {
 		$url = DevblocksPlatform::getUrlService();
 
 		$location = self::getWebPath();
-
+		
 		$parts = $url->parseURL($location);
-
+		
 		// Add any query string arguments (?arg=value&arg=value)
 		@$query = $_SERVER['QUERY_STRING'];
 		$queryArgs = $url->parseQueryString($query);
-
+		
 		if(empty($parts)) {
 			// Overrides (Form POST, etc.)
 			@$uri = DevblocksPlatform::importGPC($_REQUEST['c']); // extension
@@ -397,18 +395,18 @@ abstract class DevblocksEngine {
 			@$listener = DevblocksPlatform::importGPC($_REQUEST['a']); // listener
 			if(!empty($listener)) $parts[] = self::strAlphaNum($listener);
 		}
-
+		
 		// Controller XSS security (alphanum only)
 		if(isset($parts[0])) {
 			$parts[0] = self::strAlphaNum($parts[0]);
 		}
-
+		
 		// Resource / Proxy
 	    /*
-	     * [TODO] Run this code through another audit.  Is it worth a tiny hit per resource
-	     * to verify the plugin matches exactly in the DB?  If so, make sure we cache the
+	     * [TODO] Run this code through another audit.  Is it worth a tiny hit per resource 
+	     * to verify the plugin matches exactly in the DB?  If so, make sure we cache the 
 	     * resulting file.
-	     *
+	     * 
 	     * [TODO] Make this a controller
 	     */
 	    $path = $parts;
@@ -455,32 +453,32 @@ abstract class DevblocksEngine {
 	            		header('Content-type: text/xml;');
 	            		break;
 	            }
-
+	            
 		        echo file_get_contents($resource,false);
 				exit;
     	        break;
-
+		        
 		    default:
 		        break;
 		}
 
 		$request = new DevblocksHttpRequest($parts,$queryArgs);
 		DevblocksPlatform::setHttpRequest($request);
-
+		
 		return $request;
 	}
-
+	
 	/**
 	 * Processes the HTTP request.
-	 *
+	 * 
 	 * @param DevblocksHttpRequest $request
 	 * @param boolean $is_ajax
 	 */
 	static function processRequest(DevblocksHttpRequest $request, $is_ajax=false) {
 		$path = $request->path;
-
+		
 		$controller_uri = array_shift($path);
-
+		
 		// [JAS]: Offer the platform a chance to intercept.
 		switch($controller_uri) {
 
@@ -488,7 +486,7 @@ abstract class DevblocksEngine {
 			default:
 				$routing = array();
 	            $controllers = DevblocksPlatform::getExtensions('devblocks.controller', false);
-
+				
 				// Add any controllers which have definitive routing
 				if(is_array($controllers))
 				foreach($controllers as $controller_mft) {
@@ -502,39 +500,39 @@ abstract class DevblocksEngine {
 
 				// [TODO] Pages like 'tickets' currently work because APP_DEFAULT_CONTROLLER
 				// is the ChPageController which looks up those URIs in manifests
-
+	            
 				// Set our controller based on the results
 				$controller_mft = (isset($routing[$controller_uri]))
 					? $controllers[$routing[$controller_uri]]
 					: $controllers[APP_DEFAULT_CONTROLLER];
-
+				
 				// Instance our manifest
 				if(!empty($controller_mft)) {
 					$controller = $controller_mft->createInstance();
 				}
-
+				
 				if($controller instanceof DevblocksHttpRequestHandler) {
 					$controller->handleRequest($request);
-
+					
 					// [JAS]: If we didn't write a new response, repeat the request
 					if(null == ($response = DevblocksPlatform::getHttpResponse())) {
 						$response = new DevblocksHttpResponse($request->path);
 						DevblocksPlatform::setHttpResponse($response);
 					}
-
+					
 					// [JAS]: An Ajax request doesn't need the full Http cycle
 					if(!$is_ajax) {
 						$controller->writeResponse($response);
 					}
-
+					
 				} else {
 				    header("Status: 404");
                     die(); // [TODO] Improve
 				}
-
+					
 				break;
 		}
-
+		
 		return;
 	}
 };
@@ -600,17 +598,17 @@ class _DevblocksPluginSettingsManager {
 /**
  * Session Management Singleton
  *
- * @static
+ * @static 
  * @ingroup services
  */
 class _DevblocksSessionManager {
 	var $visit = null;
-
+	
 	/**
 	 * @private
 	 */
 	private function _DevblocksSessionManager() {}
-
+	
 	/**
 	 * Returns an instance of the session manager
 	 *
@@ -621,13 +619,13 @@ class _DevblocksSessionManager {
 		static $instance = null;
 		if(null == $instance) {
 		    $db = DevblocksPlatform::getDatabaseService();
-
+		    
 			if(is_null($db) || !$db->IsConnected()) { return null; }
-
+			
 			$prefix = (APP_DB_PREFIX != '') ? APP_DB_PREFIX.'_' : ''; // [TODO] Cleanup
-
+			
 			@session_destroy();
-
+			
 			include_once(DEVBLOCKS_PATH . "libs/adodb5/session/adodb-session2.php");
 			$options = array();
 			$options['table'] = $prefix.'session';
@@ -638,23 +636,23 @@ class _DevblocksSessionManager {
 			session_name(APP_SESSION_NAME);
 			session_set_cookie_params(0);
 			session_start();
-
+			
 			$instance = new _DevblocksSessionManager();
 			$instance->visit = isset($_SESSION['db_visit']) ? $_SESSION['db_visit'] : NULL; /* @var $visit DevblocksVisit */
 		}
-
+		
 		return $instance;
 	}
-
+	
 	/**
 	 * Returns the current session or NULL if no session exists.
-	 *
+	 * 
 	 * @return DevblocksVisit
 	 */
 	function getVisit() {
 		return $this->visit;
 	}
-
+	
 	/**
 	 * @param DevblocksVisit $visit
 	 */
@@ -662,7 +660,7 @@ class _DevblocksSessionManager {
 		$this->visit = $visit;
 		$_SESSION['db_visit'] = $this->visit;
 	}
-
+	
 	/**
 	 * Kills the current session.
 	 *
@@ -674,21 +672,15 @@ class _DevblocksSessionManager {
 	}
 }
 
-/**
- * This class wraps Zend_Cache and implements a more intelligent
- * cache manager that won't try to load the same cache twice
- * during the same request.
- *
- */
 class _DevblocksCacheManager {
     private static $instance = null;
-    private static $_zend_cache = null;
+    private static $_cacher = null;
 	private $_registry = array();
 	private $_statistics = array();
 	private $_io_reads_long = 0;
 	private $_io_reads_short = 0;
 	private $_io_writes = 0;
-
+    
     private function __construct() {}
 
     /**
@@ -697,105 +689,89 @@ class _DevblocksCacheManager {
     public static function getInstance() {
 		if(null == self::$instance) {
 			self::$instance = new _DevblocksCacheManager();
-
-	        $frontendOptions = array(
-	           'cache_id_prefix' => (defined('DEVBLOCKS_CACHE_PREFIX') && DEVBLOCKS_CACHE_PREFIX) ? DEVBLOCKS_CACHE_PREFIX : null,
-			   'lifetime' => 21600, // 6 hours
-	           'write_control' => false,
-			   'automatic_serialization' => true,
+			
+			$options = array(
+				'key_prefix' => ((defined('DEVBLOCKS_CACHE_PREFIX') && DEVBLOCKS_CACHE_PREFIX) ? DEVBLOCKS_CACHE_PREFIX : null), 
 			);
-
+			
 			// Shared-memory cache
-		    if(extension_loaded('memcache') && defined('DEVBLOCKS_MEMCACHED_SERVERS') && DEVBLOCKS_MEMCACHED_SERVERS) {
+		    if((extension_loaded('memcache') || extension_loaded('memcached')) 
+		    	&& defined('DEVBLOCKS_MEMCACHED_SERVERS') && DEVBLOCKS_MEMCACHED_SERVERS) {
 		    	$pairs = DevblocksPlatform::parseCsvString(DEVBLOCKS_MEMCACHED_SERVERS);
 		    	$servers = array();
-
+		    	
 		    	if(is_array($pairs) && !empty($pairs))
 		    	foreach($pairs as $server) {
 		    		list($host,$port) = explode(':',$server);
-
+		    		
 		    		if(empty($host) || empty($port))
 		    			continue;
-
+		    			
 		    		$servers[] = array(
 		    			'host'=>$host,
 		    			'port'=>$port,
-		    			'persistent'=>true
+//		    			'persistent'=>true
 		    		);
 		    	}
-
-				$backendOptions = array(
-					'servers' => $servers
-				);
-
-				self::$_zend_cache = Zend_Cache::factory('Core', 'Memcached', $frontendOptions, $backendOptions);
+		    	
+				$options['servers'] = $servers;
+				
+				self::$_cacher = new _DevblocksCacheManagerMemcached($options);
 		    }
 
 		    // Disk-based cache (default)
-		    if(null == self::$_zend_cache) {
-				$backendOptions = array(
-				    'cache_dir' => APP_TEMP_PATH
-				);
-
-				self::$_zend_cache = Zend_Cache::factory('Core', 'File', $frontendOptions, $backendOptions);
+		    if(null == self::$_cacher) {
+		    	$options['cache_dir'] = APP_TEMP_PATH; 
+				
+				self::$_cacher = new _DevblocksCacheManagerDisk($options);
 		    }
 		}
+		
 		return self::$instance;
     }
-
-	public function save($data, $key, $tags=array(), $lifetime=false) {
+    
+	public function save($data, $key, $tags=array(), $lifetime=0) {
 		// Monitor short-term cache memory usage
 		@$this->_statistics[$key] = intval($this->_statistics[$key]);
 		$this->_io_writes++;
-//		echo "Memory usage: ",memory_get_usage(true),"<BR>";
-		self::$_zend_cache->save($data, $key, $tags, $lifetime);
+		self::$_cacher->save($data, $key, $tags, $lifetime);
 		$this->_registry[$key] = $data;
 	}
-
+	
 	public function load($key, $nocache=false) {
-//		echo "Memory usage: ",memory_get_usage(true),"<BR>";
-//		print_r(array_keys($this->_registry));
-//		echo "<HR>";
-
 		// Retrieving the long-term cache
 		if($nocache || !isset($this->_registry[$key])) {
-//			echo "Hit long-term cache for $key<br>";
-			if(false === ($this->_registry[$key] = self::$_zend_cache->load($key)))
+			if(false === ($this->_registry[$key] = self::$_cacher->load($key)))
 				return NULL;
-
+			
 			@$this->_statistics[$key] = intval($this->_statistics[$key]) + 1;
 			$this->_io_reads_long++;
 			return $this->_registry[$key];
 		}
-
+		
 		// Retrieving the short-term cache
 		if(isset($this->_registry[$key])) {
-//			echo "Hit short-term cache for $key<br>";
 			@$this->_statistics[$key] = intval($this->_statistics[$key]) + 1;
 			$this->_io_reads_short++;
 			return $this->_registry[$key];
 		}
-
+		
 		return NULL;
 	}
-
+	
 	public function remove($key) {
 		unset($this->_registry[$key]);
 		unset($this->_statistics[$key]);
-		self::$_zend_cache->remove($key);
+		self::$_cacher->remove($key);
 	}
-
-	public function clean($mode=null) {
+	
+	public function clean() { // $mode=null
 		$this->_registry = array();
 		$this->_statistics = array();
-
-		if(!empty($mode)) {
-			self::$_zend_cache->clean($mode);
-		} else {
-			self::$_zend_cache->clean();
-		}
+		
+		self::$_cacher->clean();
 	}
-
+	
 	public function printStatistics() {
 		arsort($this->_statistics);
 		print_r($this->_statistics);
@@ -806,9 +782,130 @@ class _DevblocksCacheManager {
 	}
 };
 
+abstract class _DevblocksCacheManagerAbstract {
+	protected $_options;
+	protected $_prefix = 'devblocks_cache---';
+	
+	function __construct($options) {
+		if(is_array($options))
+			$this->_options = $options;
+		
+		// Key prefix
+		if(!isset($this->_options['key_prefix']))
+			$this->_options['key_prefix'] = '';
+	}
+	
+	function save($data, $key, $tags=array(), $lifetime=0) {}
+	function load($key) {}
+	function remove($key) {}
+	function clean() {} // $mode=null
+};
+
+class _DevblocksCacheManagerMemcached extends _DevblocksCacheManagerAbstract {
+	private $_driver;
+	
+	function __construct($options) {
+		parent::__construct($options);
+		
+		if(extension_loaded('memcached'))
+			$this->_driver = new Memcached();
+		elseif(extension_loaded('memcache'))
+			$this->_driver = new Memcache();
+		else
+			die("PECL/Memcache or PECL/Memcached is not loaded.");
+			
+		// Check servers option
+		if(!isset($this->_options['servers']) || !is_array($this->_options['servers']))
+			die("_DevblocksCacheManagerMemcached requires the 'servers' option.");
+			
+		if(is_array($this->_options['servers']))
+		foreach($this->_options['servers'] as $params) {
+			$this->_driver->addServer($params['host'], $params['port']);
+		}
+	}
+	
+	function save($data, $key, $tags=array(), $lifetime=0) {
+		$key = $this->_options['key_prefix'] . $key;
+		return $this->_driver->set($key, $data, 0, $lifetime);
+	}
+	
+	function load($key) {
+		$key = $this->_options['key_prefix'] . $key;
+		return $this->_driver->get($key);
+	}
+	
+	function remove($key) {
+		$key = $this->_options['key_prefix'] . $key;
+		$this->_driver->delete($key);
+	}
+	
+	function clean() {
+		$this->_driver->flush();
+	}
+};
+
+class _DevblocksCacheManagerDisk extends _DevblocksCacheManagerAbstract {
+	function __construct($options) {
+		parent::__construct($options);
+
+		$path = $this->_getPath();
+		
+		if(null == $path)
+			die("_DevblocksCacheManagerDisk requires the 'cache_dir' option.");
+
+		// Ensure we have a trailing slash
+		$this->_options['cache_dir'] = rtrim($path,"\\/") . DIRECTORY_SEPARATOR;
+			
+		if(!is_writeable($path))
+			die("_DevblocksCacheManagerDisk requires write access to the 'path' directory ($path)");
+	}
+	
+	private function _getPath() {
+		return $this->_options['cache_dir'];
+	}
+	
+	private function _getFilename($key) {
+		$safe_key = preg_replace("/[^A-Za-z0-9_\-]/",'_', $key);
+		return $this->_prefix . $safe_key;
+	}
+	
+	function load($key) {
+		$key = $this->_options['key_prefix'] . $key;
+		return @unserialize(file_get_contents($this->_getPath() . $this->_getFilename($key)));
+	}
+	
+	function save($data, $key, $tags=array(), $lifetime=0) {
+		$key = $this->_options['key_prefix'] . $key;
+		return file_put_contents($this->_getPath() . $this->_getFilename($key), serialize($data));
+	}
+	
+	function remove($key) {
+		$key = $this->_options['key_prefix'] . $key;
+		$file = $this->_getPath() . $this->_getFilename($key);
+		if(file_exists($file))
+			unlink($file);
+	}
+	
+	function clean() {
+		$path = $this->_getPath();
+		
+		$files = scandir($path);
+		unset($files['.']);
+		unset($files['..']);
+		
+		if(is_array($files))
+		foreach($files as $file) {
+			if(0==strcmp('devblocks_cache',substr($file,0,15))) {
+				unlink($path . $file);
+			}
+		}
+		
+	}	
+};
+
 class _DevblocksEventManager {
     private static $instance = null;
-
+    
     private function __construct() {}
 
     /**
@@ -820,7 +917,7 @@ class _DevblocksEventManager {
 		}
 		return self::$instance;
 	}
-
+	
 	function trigger(Model_DevblocksEvent $event) {
 	    /*
 	     * [TODO] Look at the hash and spawn our listeners for this particular point
@@ -836,7 +933,7 @@ class _DevblocksEventManager {
 	    foreach($events['*'] as $evt) {
 	        $listeners[] = $evt;
 	    }
-
+		
 		if(is_array($listeners) && !empty($listeners))
 		foreach($listeners as $listener) { /* @var $listener DevblocksExtensionManifest */
 			// Extensions can be invoked on these plugins even by workers who cannot see them
@@ -848,28 +945,28 @@ class _DevblocksEventManager {
             	}
             }
 		}
-
+		
 	}
 };
 
 /**
  * Email Management Singleton
  *
- * @static
+ * @static 
  * @ingroup services
  */
 class _DevblocksEmailManager {
     private static $instance = null;
-
+    
     private $mailers = array();
-
+    
 	/**
 	 * @private
 	 */
 	private function __construct() {
-
+		
 	}
-
+	
 	/**
 	 * Enter description here...
 	 *
@@ -881,7 +978,7 @@ class _DevblocksEmailManager {
 		}
 		return self::$instance;
 	}
-
+	
 	/**
 	 * Enter description here...
 	 *
@@ -890,24 +987,24 @@ class _DevblocksEmailManager {
 	function createMessage() {
 		return Swift_Message::newInstance();
 	}
-
+	
 	/**
 	 * @return Swift
 	 */
 	function getMailer($options) {
 
 		// Options
-		$smtp_host = isset($options['host']) ? $options['host'] : '127.0.0.1';
-		$smtp_port = isset($options['port']) ? $options['port'] : '25';
-		$smtp_user = isset($options['auth_user']) ? $options['auth_user'] : null;
-		$smtp_pass = isset($options['auth_pass']) ? $options['auth_pass'] : null;
-		$smtp_enc = isset($options['enc']) ? $options['enc'] : 'None';
-		$smtp_max_sends = isset($options['max_sends']) ? intval($options['max_sends']) : 20;
-		$smtp_timeout = isset($options['timeout']) ? intval($options['timeout']) : 30;
-
+		$smtp_host = isset($options['host']) ? $options['host'] : '127.0.0.1'; 
+		$smtp_port = isset($options['port']) ? $options['port'] : '25'; 
+		$smtp_user = isset($options['auth_user']) ? $options['auth_user'] : null; 
+		$smtp_pass = isset($options['auth_pass']) ? $options['auth_pass'] : null; 
+		$smtp_enc = isset($options['enc']) ? $options['enc'] : 'None'; 
+		$smtp_max_sends = isset($options['max_sends']) ? intval($options['max_sends']) : 20; 
+		$smtp_timeout = isset($options['timeout']) ? intval($options['timeout']) : 30; 
+		
 		/*
-		 * [JAS]: We'll cache connection info hashed by params and hold a persistent
-		 * connection for the request cycle.  If we ask for the same params again
+		 * [JAS]: We'll cache connection info hashed by params and hold a persistent 
+		 * connection for the request cycle.  If we ask for the same params again 
 		 * we'll get the existing connection if it exists.
 		 */
 		$hash = md5(sprintf("%s %s %s %s %s %d %d",
@@ -919,43 +1016,43 @@ class _DevblocksEmailManager {
 			$smtp_max_sends,
 			$smtp_timeout
 		));
-
+		
 		if(!isset($this->mailers[$hash])) {
 			// Encryption
 			switch($smtp_enc) {
 				case 'TLS':
 					$smtp_enc = 'tls';
 					break;
-
+					
 				case 'SSL':
 					$smtp_enc = 'ssl';
 					break;
-
+					
 				default:
 					$smtp_enc = null;
 					break;
 			}
-
+			
 			$smtp = Swift_SmtpTransport::newInstance($smtp_host, $smtp_port, $smtp_enc);
 			$smtp->setTimeout($smtp_timeout);
-
+			
 			if(!empty($smtp_user) && !empty($smtp_pass)) {
 				$smtp->setUsername($smtp_user);
 				$smtp->setPassword($smtp_pass);
 			}
-
+			
 			$mailer = Swift_Mailer::newInstance($smtp);
 			$mailer->registerPlugin(new Swift_Plugins_AntiFloodPlugin($smtp_max_sends,1));
-
+			
 			$this->mailers[$hash] =& $mailer;
 		}
 
 		return $this->mailers[$hash];
 	}
-
+	
 	function testImap($server, $port, $service, $username, $password) {
 		if (!extension_loaded("imap")) die("IMAP Extension not loaded!");
-
+		
         switch($service) {
             default:
             case 'pop3': // 110
@@ -964,21 +1061,21 @@ class _DevblocksEmailManager {
                 $port
                 );
                 break;
-
+                 
             case 'pop3-ssl': // 995
                 $connect = sprintf("{%s:%d/pop3/ssl/novalidate-cert}INBOX",
                 $server,
                 $port
                 );
                 break;
-
+                 
             case 'imap': // 143
                 $connect = sprintf("{%s:%d/notls}INBOX",
                 $server,
                 $port
                 );
                 break;
-
+                
             case 'imap-ssl': // 993
                 $connect = sprintf("{%s:%d/imap/ssl/novalidate-cert}INBOX",
                 $server,
@@ -986,7 +1083,7 @@ class _DevblocksEmailManager {
                 );
                 break;
         }
-
+		
 		@$mailbox = imap_open(
 			$connect,
 			!empty($username)?$username:"superuser",
@@ -995,38 +1092,38 @@ class _DevblocksEmailManager {
 
 		if($mailbox === FALSE)
 			return FALSE;
-
+		
 		@imap_close($mailbox);
-
+			
 		return TRUE;
 	}
-
+	
 	/**
 	 * @return array
 	 */
 	function getErrors() {
 		return imap_errors();
 	}
-
+	
 }
 
 class _DevblocksDateManager {
 	private function __construct() {}
-
+	
 	/**
-	 *
+	 * 
 	 * @return _DevblocksDateManager
 	 */
 	static function getInstance() {
 		static $instance = null;
-
+		
 		if(null == $instance) {
 			$instance = new _DevblocksDateManager();
 		}
-
+		
 		return $instance;
 	}
-
+	
 	public function formatTime($format, $timestamp) {
 		try {
 			if(is_numeric($timestamp))
@@ -1036,14 +1133,14 @@ class _DevblocksDateManager {
 		} catch (Exception $e) {
 			$timestamp = time();
 		}
-
+		
 		if(empty($format)) {
 			return strftime('%a, %d %b %Y %H:%M:%S %z', $timestamp);
 		} else {
 			return strftime($format, $timestamp);
 		}
 	}
-
+	
 	public function getTimezones() {
 		return array(
 			'Africa/Abidjan',
@@ -1408,38 +1505,38 @@ class _DevblocksDateManager {
 class _DevblocksTranslationManager {
 	private $_locales = array();
 	private $_locale = 'en_US';
-
+	
 	private function __construct() {}
-
+	
 	static function getInstance() {
 		static $instance = null;
-
+		
 		if(null == $instance) {
 			$instance = new _DevblocksTranslationManager();
 		}
-
+		
 		return $instance;
 	}
-
+	
 	public function addLocale($locale, $strings) {
 		$this->_locales[$locale] = $strings;
 	}
-
+	
 	public function setLocale($locale) {
 		if(isset($this->_locales[$locale]))
 			$this->_locale = $locale;
 	}
-
+	
 	public function _($token) {
 		if(isset($this->_locales[$this->_locale][$token]))
 			return $this->_locales[$this->_locale][$token];
-
+		
 		// [JAS] Make it easy to find things that don't translate
 		//return '$'.$token.'('.$this->_locale.')';
-
+		
 		return $token;
 	}
-
+	
 	public function getLocaleCodes() {
 		return array(
 			'af_ZA',
@@ -1498,14 +1595,14 @@ class _DevblocksTranslationManager {
 			'zh_TW',
 		);
 	}
-
+	
 	function getLocaleStrings() {
 		$codes = $this->getLocaleCodes();
 		$langs = $this->getLanguageCodes();
 		$countries = $this->getCountryCodes();
-
+		
 		$lang_codes = array();
-
+		
 		if(is_array($codes))
 		foreach($codes as $code) {
 			$data = explode('_', $code);
@@ -1516,16 +1613,16 @@ class _DevblocksTranslationManager {
 				? ($lang . ' (' . $terr . ')')
 				: $code;
 		}
-
+		
 		asort($lang_codes);
-
+		
 		unset($codes);
 		unset($langs);
 		unset($countries);
-
+		
 		return $lang_codes;
 	}
-
+	
 	function getLanguageCodes() {
 		return array(
 			'aa' => "Afar",
@@ -1702,7 +1799,7 @@ class _DevblocksTranslationManager {
 			'zu' => "Zulu",
 		);
 	}
-
+	
 	function getCountryCodes() {
 		return array(
 			'AD' => "Andorra",
@@ -1963,14 +2060,14 @@ class _DevblocksTranslationManager {
 class _DevblocksTemplateManager {
 	/**
 	 * Constructor
-	 *
+	 * 
 	 * @private
 	 */
 	private function _DevblocksTemplateManager() {}
 	/**
 	 * Returns an instance of the Smarty Template Engine
-	 *
-	 * @static
+	 * 
+	 * @static 
 	 * @return Smarty
 	 */
 	static function getInstance() {
@@ -2222,45 +2319,45 @@ class _DevblocksTemplateBuilder {
  * @ingroup services
  */
 class _DevblocksDatabaseManager {
-
+	
 	/**
-	 * Constructor
-	 *
+	 * Constructor 
+	 * 
 	 * @private
 	 */
 	private function _DevblocksDatabaseManager() {}
-
+	
 	/**
 	 * Returns an ADODB database resource
 	 *
-	 * @static
+	 * @static 
 	 * @return ADOConnection
 	 */
 	static function getInstance() {
 		static $instance = null;
-
+		
 		if(null == $instance) {
 			include_once(DEVBLOCKS_PATH . "libs/adodb5/adodb.inc.php");
 			$ADODB_CACHE_DIR = APP_TEMP_PATH . "/cache";
-
+			
 			if('' == APP_DB_DRIVER || '' == APP_DB_HOST)
 			    return null;
-
+			
 			@$instance =& ADONewConnection(APP_DB_DRIVER); /* @var $instance ADOConnection */
-
+			
 			// Make the connection (or persist it)
 			if(defined('APP_DB_PCONNECT') && APP_DB_PCONNECT) {
 				@$instance->PConnect(APP_DB_HOST,APP_DB_USER,APP_DB_PASS,APP_DB_DATABASE);
-			} else {
+			} else { 
 				@$instance->Connect(APP_DB_HOST,APP_DB_USER,APP_DB_PASS,APP_DB_DATABASE);
 			}
 
 			if(null == $instance || !$instance->IsConnected())
 				die("[Error]: There is no connection to the database.  Check your connection details.");
-
+			
 			@$instance->SetFetchMode(ADODB_FETCH_ASSOC);
 			//$instance->LogSQL(false);
-
+			
 			// Encoding
 			$instance->Execute('SET NAMES ' . DB_CHARSET_CODE);
 		}
@@ -2269,23 +2366,23 @@ class _DevblocksDatabaseManager {
 };
 
 class _DevblocksPatchManager {
-	private static $instance = null;
+	private static $instance = null; 
 	private $containers = array(); // DevblocksPatchContainerExtension[]
 	private $errors = array();
 
 	private function __construct() {}
-
+	
 	public static function getInstance() {
 		if(null == self::$instance) {
 			self::$instance = new _DevblocksPatchManager();
 		}
 		return self::$instance;
 	}
-
+	
 	public function registerPatchContainer(DevblocksPatchContainerExtension $container) {
 		$this->containers[] = $container;
 	}
-
+	
 	public function run() {
 		$result = TRUE;
 
@@ -2299,23 +2396,23 @@ class _DevblocksPatchManager {
 					array_unshift($this->containers, $container);
 				}
 			}
-
+			
 			foreach($this->containers as $container) { /* @var $container DevblocksPatchContainerExtension */
 				$result = $container->run();
 				if(!$result) die("FAILED on " . $container->id);
 			}
 		}
-
+		
 		$this->clear();
-
+		
 		return TRUE;
 	}
-
+	
 	// [TODO] Populate
 	public function getErrors() {
 		return $this->errors;
 	}
-
+	
 	public function clear() {
 		// [TODO] We probably need a mechanism to clear errors also.
 		$this->containers = array();
@@ -2325,22 +2422,21 @@ class _DevblocksPatchManager {
 
 class _DevblocksClassLoadManager {
 	const CACHE_CLASS_MAP = 'devblocks_classloader_map';
-
+	
     private static $instance = null;
 	private $classMap = array();
-
+	
     private function __construct() {
 		$cache = DevblocksPlatform::getCacheService();
 		if(null !== ($map = $cache->load(self::CACHE_CLASS_MAP))) {
 			$this->classMap = $map;
 		} else {
-			$this->_initLibs();
-			$this->_initZend();
+			$this->_initLibs();	
 			$this->_initPlugins();
 			$cache->save($this->classMap, self::CACHE_CLASS_MAP);
 		}
 	}
-
+    
 	/**
 	 * @return _DevblocksClassLoadManager
 	 */
@@ -2350,11 +2446,11 @@ class _DevblocksClassLoadManager {
 		}
 		return self::$instance;
 	}
-
+	
 	public function destroy() {
 		self::$instance = null;
 	}
-
+	
 	public function loadClass($className) {
 		if(class_exists($className))
 			return;
@@ -2367,122 +2463,88 @@ class _DevblocksClassLoadManager {
 			// Not found
 		}
 	}
-
+	
 	public function registerClasses($file,$classes=array()) {
 		if(is_array($classes))
 		foreach($classes as $class) {
 			$this->classMap[$class] = $file;
 		}
 	}
-
+	
 	private function _initPlugins() {
-		// Load all the exported classes defined by plugin manifests
+		// Load all the exported classes defined by plugin manifests		
 		$class_map = DAO_Platform::getClassLoaderMap();
 		if(is_array($class_map) && !empty($class_map))
 		foreach($class_map as $path => $classes) {
 			$this->registerClasses($path, $classes);
 		}
 	}
-
+	
 	private function _initLibs() {
-	}
-
-	private function _initZend() {
-		$path = APP_PATH . '/libs/devblocks/libs/zend_framework/Zend/';
-
-		$this->registerClasses($path . 'Cache.php', array(
-			'Zend_Cache',
-		));
-
-		$this->registerClasses($path . 'Exception.php', array(
-			'Zend_Exception',
-		));
-
-	    $this->registerClasses($path . 'Registry.php', array(
-			'Zend_Registry',
-		));
-
-		$this->registerClasses($path . 'Feed/Exception.php', array(
-			'Zend_Feed_Exception',
-		));
-
-		$this->registerClasses($path . 'Feed.php', array(
-			'Zend_Feed',
-		));
-
-		$this->registerClasses($path . 'Feed/Atom.php', array(
-			'Zend_Feed_Atom',
-		));
-
-		$this->registerClasses($path . 'Feed/Builder.php', array(
-			'Zend_Feed_Builder',
-		));
-
-		$this->registerClasses($path . 'Feed/Rss.php', array(
-			'Zend_Feed_Rss',
-		));
-
-		$this->registerClasses($path . 'Json.php', array(
-			'Zend_Json',
-		));
-
-		$this->registerClasses($path . 'Log.php', array(
-			'Zend_Log',
-		));
-
-		$this->registerClasses($path . 'Log/Writer/Stream.php', array(
-			'Zend_Log_Writer_Stream',
-		));
-
-		$this->registerClasses($path . 'Mail.php', array(
-			'Zend_Mail',
-		));
-
-		$this->registerClasses($path . 'Mail/Storage/Pop3.php', array(
-			'Zend_Mail_Storage_Pop3',
-		));
-
-		$this->registerClasses($path . 'Mime.php', array(
-			'Zend_Mime',
-		));
-
-		$this->registerClasses($path . 'Validate/EmailAddress.php', array(
-			'Zend_Validate_EmailAddress',
-		));
-
-		$this->registerClasses($path . 'Mail/Transport/Smtp.php', array(
-			'Zend_Mail_Transport_Smtp',
-		));
-
-		$this->registerClasses($path . 'Mail/Transport/Sendmail.php', array(
-			'Zend_Mail_Transport_Sendmail',
-		));
 	}
 };
 
 class _DevblocksLogManager {
-	static $consoleLogger = null;
+	static $_instance = null;
+	
+    // Used the ZF classifications
+	private static $_log_levels = array(
+		'emerg' => 0,		// Emergency: system is unusable
+		'emergency' => 0,	
+		'alert' => 1,		// Alert: action must be taken immediately
+		'crit' => 2,		// Critical: critical conditions
+		'critical' => 2,	
+		'err' => 3,			// Error: error conditions
+		'error' => 3,		
+		'warn' => 4,		// Warning: warning conditions
+		'warning' => 4,		
+		'notice' => 5,		// Notice: normal but significant condition
+		'info' => 6,		// Informational: informational messages
+		'debug' => 7,		// Debug: debug messages
+	);
 
+	private $_log_level = 0;
+	private $_fp = null;
+	
 	static function getConsoleLog() {
-		if(null == self::$consoleLogger) {
-			$writer = new Zend_Log_Writer_Stream('php://output');
-			$writer->setFormatter(new Zend_Log_Formatter_Simple('[%priorityName%]: %message%<BR>' . PHP_EOL));
-			self::$consoleLogger = new Zend_Log($writer);
-
-			// Allow query string overloading Devblocks-wide
-			@$log_level = DevblocksPlatform::importGPC($_REQUEST['loglevel'],'integer',0);
-			self::$consoleLogger->addFilter(new Zend_Log_Filter_Priority($log_level));
+		if(null == self::$_instance) {
+			self::$_instance = new _DevblocksLogManager();
 		}
-
-		return self::$consoleLogger;
+		
+		return self::$_instance;
+	}
+	
+	private function __construct() {
+		// Allow query string overloading Devblocks-wide
+		@$log_level = DevblocksPlatform::importGPC($_REQUEST['loglevel'],'integer', 0);
+		$this->_log_level = intval($log_level);
+		
+		// Open file pointer
+		$this->_fp = fopen('php://output', 'w+');
+	}
+	
+	public function __destruct() {
+		@fclose($this->_fp);	
+	}	
+	
+	public function __call($name, $args) {
+		if(isset(self::$_log_levels[$name])) {
+			if(self::$_log_levels[$name] <= $this->_log_level) {
+				$out = sprintf("[%s] %s<BR>\n",
+					strtoupper($name),
+					$args[0]
+				);
+				fputs($this->_fp, $out);
+			}
+		}
 	}
 };
 
 class _DevblocksUrlManager {
     private static $instance = null;
-
+        
    	private function __construct() {}
-
+	
 	/**
 	 * @return _DevblocksUrlManager
 	 */
@@ -2492,11 +2554,11 @@ class _DevblocksUrlManager {
 		}
 		return self::$instance;
 	}
-
+	
 	function parseQueryString($args) {
 		$argc = array();
 		if(empty($args)) return $argc;
-
+		
 		$query = explode('&', $args);
 		if(is_array($query))
 		foreach($query as $q) {
@@ -2505,10 +2567,10 @@ class _DevblocksUrlManager {
 			if(empty($v)) continue;
 			@$argc[strtolower($v[0])] = $v[1];
 		}
-
+		
 		return $argc;
 	}
-
+	
 	function parseURL($url) {
 		// [JAS]: Use the index.php page as a reference to deconstruct the URI
 		$pos = stripos($_SERVER['PHP_SELF'],'index.php',0);
@@ -2518,7 +2580,7 @@ class _DevblocksUrlManager {
 		if(isset($_SERVER['HTTP_DEVBLOCKSPROXYHOST'])) {
 			$url = urldecode($url);
 		}
-
+		
 		// [JAS]: Extract the basedir of the path
 		$basedir = substr($url,0,$pos);
 
@@ -2527,33 +2589,33 @@ class _DevblocksUrlManager {
 		if($pos !== FALSE) {
 			$url = substr($url,0,$pos);
 		}
-
+		
 		$len = strlen($basedir);
 		if(!DEVBLOCKS_REWRITE) $len += strlen("index.php/");
-
+		
 		$request = substr($url, $len);
-
+		
 		if(empty($request)) return array();
-
+		
 		$parts = explode('/', $request);
 
 		if(trim($parts[count($parts)-1]) == '') {
 			unset($parts[count($parts)-1]);
 		}
-
+		
 		return $parts;
 	}
-
- function write($sQuery='',$full=false,$check_proxy=true) {
-   $args = $this->parseQueryString($sQuery);
+	
+	function write($sQuery='',$full=false,$check_proxy=true) {
+		$args = $this->parseQueryString($sQuery);
 		$c = @$args['c'];
-
-   // Allow proxy override
-   if($check_proxy) {
-       @$proxyssl = $_SERVER['HTTP_DEVBLOCKSPROXYSSL'];
-       @$proxyhost = $_SERVER['HTTP_DEVBLOCKSPROXYHOST'];
-       @$proxybase = $_SERVER['HTTP_DEVBLOCKSPROXYBASE'];
-   }
+		
+		// Allow proxy override
+		if($check_proxy) {
+    		@$proxyssl = $_SERVER['HTTP_DEVBLOCKSPROXYSSL'];
+    		@$proxyhost = $_SERVER['HTTP_DEVBLOCKSPROXYHOST'];
+    		@$proxybase = $_SERVER['HTTP_DEVBLOCKSPROXYBASE'];
+		}
 
 		// Proxy (Community Tool)
 		if(!empty($proxyhost)) {
@@ -2566,21 +2628,21 @@ class _DevblocksUrlManager {
 			} else {
 				$prefix = $proxybase.'/';
 			}
-
+		
 			// Index page
 			if(empty($sQuery)) {
 			    return sprintf("%s",
 			        $prefix
 			    );
 			}
-
+			
 			// [JAS]: Internal non-component URL (images/css/js/etc)
 			if(empty($c)) {
 				$contents = sprintf("%s%s",
 					$prefix,
 					$sQuery
 				);
-
+		    
 			// [JAS]: Component URL
 			} else {
 				$contents = sprintf("%s%s",
@@ -2588,17 +2650,17 @@ class _DevblocksUrlManager {
 					(!empty($args) ? implode('/',array_values($args)) : '')
 				);
 			}
-
+			
 		// Devblocks App
 		} else {
 			if($full) {
 				$prefix = sprintf("%s://%s%s",
 					($this->isSSL() ? 'https' : 'http'),
 					$_SERVER['HTTP_HOST'],
-         DEVBLOCKS_APP_WEBPATH
+					DEVBLOCKS_APP_WEBPATH
 				);
 			} else {
-       $prefix = DEVBLOCKS_APP_WEBPATH;
+				$prefix = DEVBLOCKS_APP_WEBPATH;
 			}
 
 			// Index page
@@ -2608,14 +2670,14 @@ class _DevblocksUrlManager {
 			        (DEVBLOCKS_REWRITE) ? '' : 'index.php/'
 			    );
 			}
-
+			
 			// [JAS]: Internal non-component URL (images/css/js/etc)
 			if(empty($c)) {
 				$contents = sprintf("%s%s",
 					$prefix,
 					$sQuery
 				);
-
+		    
 				// [JAS]: Component URL
 			} else {
 				if(DEVBLOCKS_REWRITE) {
@@ -2623,7 +2685,7 @@ class _DevblocksUrlManager {
 						$prefix,
 						(!empty($args) ? implode('/',array_values($args)) : '')
 					);
-
+					
 				} else {
 					$contents = sprintf("%sindex.php/%s",
 						$prefix,
@@ -2633,10 +2695,10 @@ class _DevblocksUrlManager {
 				}
 			}
 		}
-
+		
 		return $contents;
 	}
-
+	
 	/**
 	 * Enter description here...
 	 *
@@ -2653,32 +2715,32 @@ class _DevblocksUrlManager {
 			return false;
 		}
 	}
-
+	
 	/**
 	 * Useful for converting DevblocksRequest and DevblocksResponse objects to a URL
 	 */
 	function writeDevblocksHttpIO($request, $full=false) {
 		$url_parts = '';
-
+		
 		if(is_array($request->path) && count($request->path) > 0)
 			$url_parts = 'c=' . array_shift($request->path);
-
+		
 		if(!empty($request->path))
 			$url_parts .= '&f=' . implode('/', $request->path);
-
-		// Build the URL
+		
+		// Build the URL		
 		$url = $this->write($url_parts, $full);
-
+		
 		$query = '';
 		foreach($request->query as $key=>$val) {
-			$query .=
-				(empty($query)?'':'&') . // arg1=val1&arg2=val2
-				$key .
-				'=' .
+			$query .= 
+				(empty($query)?'':'&') . // arg1=val1&arg2=val2 
+				$key . 
+				'=' . 
 				$val
 			;
 		}
-
+		
 		if(!empty($query))
 			$url .= '?' . $query;
 
@@ -2703,7 +2765,7 @@ class DevblocksProxy {
 
         return $proxy;
     }
-
+    
     function proxy($remote_host, $remote_uri) {
         $this->_get($remote_host, $remote_uri);
     }
@@ -2729,7 +2791,7 @@ class DevblocksProxy_Socket extends DevblocksProxy {
 
     function _send($fp, $out) {
 	    fwrite($fp, $out);
-
+	    
 	    while(!feof($fp)) {
 	        fgets($fp,4096);
 	    }
