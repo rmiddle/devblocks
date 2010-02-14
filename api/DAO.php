@@ -576,7 +576,7 @@ class DAO_DevblocksTemplate extends DevblocksORMHelper {
 		
 		while($row = mysql_fetch_assoc($rs)) {
 			$result = array();
-			foreach($rs->fields as $f => $v) {
+			foreach($row as $f => $v) {
 				$result[$f] = $v;
 			}
 			$object_id = intval($row[SearchFields_DevblocksTemplate::ID]);
@@ -886,7 +886,7 @@ class DAO_Translation extends DevblocksORMHelper {
 	}
 	
 	/**
-	 * @param ADORecordSet $rs
+	 * @param resource $rs
 	 * @return Model_TranslationDefault[]
 	 */
 	static private function _getObjectsFromResult($rs) {
