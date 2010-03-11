@@ -3,7 +3,7 @@ include_once(DEVBLOCKS_PATH . "api/Model.php");
 include_once(DEVBLOCKS_PATH . "api/DAO.php");
 include_once(DEVBLOCKS_PATH . "api/Extension.php");
 
-define('PLATFORM_BUILD',2010030402);
+define('PLATFORM_BUILD',2010031102);
 
 /**
  * A platform container for plugin/extension registries.
@@ -30,7 +30,9 @@ class DevblocksPlatform extends DevblocksEngine {
     
     static private $locale = 'en_US';
     
-    private function __construct() {}
+    static private $_tmp_files = array();
+    
+    private function __construct() { return false; }
 
 	/**
 	 * @param mixed $var
@@ -389,6 +391,33 @@ class DevblocksPlatform extends DevblocksEngine {
 		return self::$start_peak_memory;
 	}
 	
+	/**
+	 * @return resource $fp
+	 */
+	public static function getTempFile() {
+		// Generate a new temporary file
+		$file_name = tempnam(APP_TEMP_PATH, 'tmp');
+		
+		// Open the file pointer
+		$fp = fopen($file_name, "w+b");
+		
+		// Manually keep track of these temporary files
+		self::$_tmp_files[intval($fp)] = $file_name;
+		return $fp;
+	}
+	
+	/**
+	 * @return resource $fp
+	 */
+	public static function getTempFileInfo($fp) {
+		// If we're asking about a specific temporary file
+		if(!empty($fp)) {
+			if(@isset(self::$_tmp_files[intval($fp)]))
+				return self::$_tmp_files[intval($fp)];
+			return false;
+		}
+	}
+
 	/**
 	 * Checks whether the active database has any tables.
 	 * 
@@ -1192,6 +1221,16 @@ class DevblocksPlatform extends DevblocksEngine {
 		
         @define('DEVBLOCKS_WEBPATH',$context_self);
         @define('DEVBLOCKS_APP_WEBPATH',$app_self);
+        
+        // Register shutdown function
+        register_shutdown_function(array('DevblocksPlatform','shutdown'));
+	}
+	
+	static function shutdown() {
+		// Clean up any temporary files
+		while(null != ($tmpfile = array_pop(self::$_tmp_files))) {
+			@unlink($tmpfile);
+		}
 	}
 
 	static function setExtensionDelegate($class) {
@@ -3450,8 +3489,8 @@ class _DevblocksTemplateManager {
 		if(!is_numeric($string))
 			return '';
 			
-		$bytes = intval($string);
-		$precision = intval($precision);
+		$bytes = floatval($string);
+		$precision = floatval($precision);
 		$out = '';
 		
 		if($bytes >= 1000000000) {
