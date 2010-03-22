@@ -23,6 +23,39 @@ abstract class DevblocksORMHelper {
 		return $id;
 	}
 	
+	static protected function _getWhereSQL($where=null, $sortBy=null, $sortAsc=true, $limit=null) {
+		// Where
+		$where_sql = !empty($where) ? sprintf("WHERE %s ", $where) : '';
+		
+		// Sorting
+		if(is_array($sortBy)) {
+			$sortPairs = array();
+			foreach($sortBy as $k => $v) {
+				$sortPairs[] = sprintf("%s %s",
+					$v,
+					(is_array($sortAsc) ? (@$sortAsc[$k] ? 'ASC' : 'DESC') : ($sortAsc ? 'ASC' : 'DESC')) 
+				);
+			}
+			
+			$sort_sql = 'ORDER BY '. implode(', ', $sortPairs) . ' ';
+			
+		} else {
+			$sortAsc = ($sortAsc) ? 'ASC' : 'DESC';
+			$sort_sql = !empty($sortBy) ? sprintf("ORDER BY %s %s ", $sortBy, $sortAsc) : '';
+		}
+		
+		// Limit
+		$limit_sql = !empty($limit) ? sprintf("LIMIT 0,%d ", $limit) : '';
+		
+		$return = array(
+			$where_sql,
+			$sort_sql,
+			$limit_sql
+		);
+		
+		return $return;
+	}
+	
 	/**
 	 * @param integer $id
 	 * @param array $fields
