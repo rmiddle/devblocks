@@ -3,7 +3,7 @@ include_once(DEVBLOCKS_PATH . "api/Model.php");
 include_once(DEVBLOCKS_PATH . "api/DAO.php");
 include_once(DEVBLOCKS_PATH . "api/Extension.php");
 
-define('PLATFORM_BUILD',2010033001);
+define('PLATFORM_BUILD',2010040401);
 
 /**
  * A platform container for plugin/extension registries.
@@ -1294,7 +1294,7 @@ class PlatformPatchContainer extends DevblocksPatchContainerExtension {
 		$this->registerPatch(new DevblocksPatch('devblocks.core',1,$file_prefix.'1.0.0.php',''));
 		$this->registerPatch(new DevblocksPatch('devblocks.core',253,$file_prefix.'1.0.0_beta.php',''));
 		$this->registerPatch(new DevblocksPatch('devblocks.core',290,$file_prefix.'1.1.0.php',''));
-		$this->registerPatch(new DevblocksPatch('devblocks.core',303,$file_prefix.'2.0.0.php',''));
+		$this->registerPatch(new DevblocksPatch('devblocks.core',304,$file_prefix.'2.0.0.php',''));
 	}
 };
 
@@ -2747,21 +2747,25 @@ class _DevblocksDateManager {
 		return $instance;
 	}
 	
-	public function formatTime($format, $timestamp) {
+	public function formatTime($format, $timestamp, $gmt=false) {
 		try {
-			if(is_numeric($timestamp))
-				$timestamp = intval($timestamp);
-			else
-				$timestamp = strtotime($time);
+			$datetime = new DateTime();
+			$datetime->setTimezone(new DateTimeZone('GMT'));
+			$date = explode(' ',gmdate("Y m d", $timestamp));
+			$time = explode(':',gmdate("H:i:s", $timestamp));
+			$datetime->setDate($date[0],$date[1],$date[2]);
+			$datetime->setTime($time[0],$time[1],$time[2]);
 		} catch (Exception $e) {
-			$timestamp = time();
+			$datetime = new DateTime();
 		}
 		
-		if(empty($format)) {
-			return strftime('%a, %d %b %Y %H:%M:%S %z', $timestamp);
-		} else {
-			return strftime($format, $timestamp);
-		}
+		if(empty($format))
+			$format = DateTime::RFC822; 
+		
+		if(!$gmt)
+			$datetime->setTimezone(new DateTimeZone(date_default_timezone_get()));
+			
+		return $datetime->format($format);
 	}
 	
 	public function getTimezones() {
@@ -3712,6 +3716,7 @@ class _DevblocksTemplateManager {
 			// Devblocks plugins
 			$instance->register_block('devblocks_url', array('_DevblocksTemplateManager', 'block_devblocks_url'));
 			$instance->register_modifier('devblocks_date', array('_DevblocksTemplateManager', 'modifier_devblocks_date'));
+			$instance->register_modifier('devblocks_hyperlinks', array('_DevblocksTemplateManager', 'modifier_devblocks_hyperlinks'));
 			$instance->register_modifier('devblocks_prettytime', array('_DevblocksTemplateManager', 'modifier_devblocks_prettytime'));
 			$instance->register_modifier('devblocks_prettybytes', array('_DevblocksTemplateManager', 'modifier_devblocks_prettybytes'));
 			$instance->register_modifier('devblocks_translate', array('_DevblocksTemplateManager', 'modifier_devblocks_translate'));
@@ -3749,12 +3754,12 @@ class _DevblocksTemplateManager {
 	    }
 	}
 	
-	static function modifier_devblocks_date($string, $format=null) {
+	static function modifier_devblocks_date($string, $format=null, $gmt=false) {
 		if(empty($string))
 			return '';
 	
 		$date = DevblocksPlatform::getDateService();
-		return $date->formatTime($format, $string);
+		return $date->formatTime($format, $string, $gmt);
 	}
 	
 	static function modifier_devblocks_prettytime($string, $format=null) {
@@ -3809,7 +3814,19 @@ class _DevblocksTemplateManager {
 		}
 		
 		echo $out;
-	}	
+	}
+	
+	function modifier_devblocks_hyperlinks($string, $sanitize = false, $style="") {
+		$from = array("&gt;");
+		$to = array(">");
+		
+		$string = str_replace($from,$to,$string);
+		
+		if($sanitize !== false)
+			return preg_replace("/((http|https):\/\/(.*?))(\s|\>|&lt;|&quot;|\)|$)/ie","'<a href=\"goto.php?url='.'\\1'.'\" target=\"_blank\">\\1</a>\\4'",$string);
+		else
+			return preg_replace("/((http|https):\/\/(.*?))(\s|\>|&lt;|&quot;|\)|$)/ie","'<a href=\"'.'\\1'.'\" target=\"_blank\">\\1</a>\\4'",$string);
+	}
 };
 
 class _DevblocksSmartyTemplateResource {
