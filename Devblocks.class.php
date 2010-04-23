@@ -1048,8 +1048,8 @@ class DevblocksPlatform extends DevblocksEngine {
 		
 		if(is_array($plugins))
 		foreach($plugins as $plugin) {
-			if(is_array($plugin->templates))
-			foreach($plugin->templates as $tpl) {
+			if(isset($plugin->manifest_cache['templates']) && is_array($plugin->manifest_cache['templates']))
+			foreach($plugin->manifest_cache['templates'] as $tpl) {
 				if(null === $set || 0 == strcasecmp($set, $tpl['set'])) {
 					$template = new DevblocksTemplate();
 					$template->plugin_id = $tpl['plugin_id'];
@@ -3765,33 +3765,49 @@ class _DevblocksTemplateManager {
 		return $date->formatTime($format, $string, $gmt);
 	}
 	
-	static function modifier_devblocks_prettytime($string, $format=null) {
+	static function modifier_devblocks_prettytime($string, $is_delta=false) {
 		if(empty($string) || !is_numeric($string))
 			return '';
 		
-		$diffsecs = time() - intval($string);
-		$whole = '';		
+		if(!$is_delta) {
+			$diffsecs = time() - intval($string);
+		} else {
+			$diffsecs = intval($string);
+		}
+		
+		$whole = '';
+
+		if($is_delta) {
+			if($diffsecs > 0)
+				$whole .= '+';
+			if($diffsecs < 0)
+				$whole .= '-';
+		}
 		
 		// The past
 		if($diffsecs >= 0) {
 			if($diffsecs >= 86400) { // days
-				$whole = floor($diffsecs/86400).'d ago';
+				$whole .= floor($diffsecs/86400).'d';
 			} elseif($diffsecs >= 3600) { // hours
-				$whole = floor($diffsecs/3600).'h ago';
+				$whole .= floor($diffsecs/3600).'h';
 			} elseif($diffsecs >= 60) { // mins
-				$whole = floor($diffsecs/60).'m ago';
+				$whole .= floor($diffsecs/60).'m';
 			} elseif($diffsecs >= 0) { // secs
-				$whole = $diffsecs.'s ago';
+				$whole .= $diffsecs.'s';
 			}
+			
+			if(!$is_delta)
+				$whole .= ' ago';
+			
 		} else { // The future
 			if($diffsecs <= -86400) { // days
-				$whole = floor($diffsecs/-86400).'d';
+				$whole .= floor($diffsecs/-86400).'d';
 			} elseif($diffsecs <= -3600) { // hours
-				$whole = floor($diffsecs/-3600).'h';
+				$whole .= floor($diffsecs/-3600).'h';
 			} elseif($diffsecs <= -60) { // mins
-				$whole = floor($diffsecs/-60).'m';
+				$whole .= floor($diffsecs/-60).'m';
 			} elseif($diffsecs <= 0) { // secs
-				$whole = $diffsecs.'s';
+				$whole .= $diffsecs.'s';
 			}
 		}
 		
