@@ -2,10 +2,6 @@
 class DevblocksStorageEngineDisk extends Extension_DevblocksStorageEngine {
 	const ID = 'devblocks.storage.engine.disk'; 
 	
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
 	public function setOptions($options) {
 		parent::setOptions($options);
 		
@@ -15,8 +11,12 @@ class DevblocksStorageEngineDisk extends Extension_DevblocksStorageEngine {
 	}
 	
 	function testConfig() {
-		$path = APP_STORAGE_PATH . '/';
-		if(!is_writeable($path))
+		@$path = DevblocksPlatform::importGPC($_POST['path'],'string','');
+		
+		if(empty($path))
+			$path = APP_STORAGE_PATH . '/';
+			
+		if(!is_dir($path) || !is_writeable($path))
 			return false;
 			
 		return true;
@@ -24,23 +24,28 @@ class DevblocksStorageEngineDisk extends Extension_DevblocksStorageEngine {
 	
 	function renderConfig(Model_DevblocksStorageProfile $profile) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$path = dirname(dirname(__FILE__)) . '/templates';
 		
 		$tpl->assign('profile', $profile);
 		
-		$tpl->display("file:{$path}/storage_engine/config/disk.tpl");
+		$tpl->display("devblocks:devblocks.core::storage_engine/config/disk.tpl");
 	}
 	
 	function saveConfig(Model_DevblocksStorageProfile $profile) {
-//		@$var = DevblocksPlatform::importGPC($_POST['var'],'string','');
+		@$path = DevblocksPlatform::importGPC($_POST['path'],'string','');
 		
-//		$fields = array(
-//			DAO_DevblocksStorageProfile::PARAMS_JSON => json_encode(array(
-//				'var' => $var,
-//			)),
-//		);
+		if(!is_dir($path) || !is_writeable($path))
+			return;
 		
-//		DAO_DevblocksStorageProfile::update($profile->id, $fields);
+		// Format path
+		$path = rtrim($path,'\/') . '/';
+			
+		$fields = array(
+			DAO_DevblocksStorageProfile::PARAMS_JSON => json_encode(array(
+				'storage_path' => $path,
+			)),
+		);
+		
+		DAO_DevblocksStorageProfile::update($profile->id, $fields);
 	}
 	
 	public function exists($namespace, $key) {
@@ -101,9 +106,13 @@ class DevblocksStorageEngineDisk extends Extension_DevblocksStorageEngine {
 			$key
 		);
 		
+		if(!file_exists($path))
+			return false;
+		
 		// Read into file handle
 		if($fp && is_resource($fp)) {
 			$src_fp = fopen($path, 'rb');
+			if(is_resource($src_fp))
 			while(!feof($src_fp)) {
 				if(false === fwrite($fp, fread($src_fp, 65536))) {
 					fclose($src_fp);
@@ -143,10 +152,6 @@ class DevblocksStorageEngineDatabase extends Extension_DevblocksStorageEngine {
 	const ID = 'devblocks.storage.engine.database';
 	
 	private $_db = null;
-	
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
 	
 	public function setOptions($options) {
 		parent::setOptions($options);
@@ -198,11 +203,9 @@ class DevblocksStorageEngineDatabase extends Extension_DevblocksStorageEngine {
 	
 	function renderConfig(Model_DevblocksStorageProfile $profile) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$path = dirname(dirname(__FILE__)) . '/templates';
-		
 		$tpl->assign('profile', $profile);
 		
-		$tpl->display("file:{$path}/storage_engine/config/database.tpl");
+		$tpl->display("devblocks:devblocks.core::storage_engine/config/database.tpl");
 	}
 	
 	function saveConfig(Model_DevblocksStorageProfile $profile) {
@@ -297,6 +300,7 @@ class DevblocksStorageEngineDatabase extends Extension_DevblocksStorageEngine {
 		$chunks = 1;
 		
 		fseek($fp, 0);
+		if(is_resource($fp))
 		while(!feof($fp)) {
 			$chunk = fread($fp, $chunk_size);
 			
@@ -402,10 +406,6 @@ class DevblocksStorageEngineS3 extends Extension_DevblocksStorageEngine {
 	
 	private $_s3 = null;
 	
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
 	public function setOptions($options) {
 		parent::setOptions($options);
 		
@@ -445,11 +445,9 @@ class DevblocksStorageEngineS3 extends Extension_DevblocksStorageEngine {
 	
 	function renderConfig(Model_DevblocksStorageProfile $profile) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$path = dirname(dirname(__FILE__)) . '/templates';
-		
 		$tpl->assign('profile', $profile);
 		
-		$tpl->display("file:{$path}/storage_engine/config/s3.tpl");
+		$tpl->display("devblocks:devblocks.core::storage_engine/config/s3.tpl");
 	}
 	
 	function saveConfig(Model_DevblocksStorageProfile $profile) {
