@@ -79,6 +79,16 @@ function interceptInputCRLF(e,cb) {
 	return code != 13;
 }
 
+function getEventTarget(e) {
+	if(!e) e = event;
+	
+	if(e.target) {
+		return e.target.nodeName;
+	} else if (e.srcElement) {
+		return e.srcElement.nodeName;
+	}
+}
+
 /* From:
  * http://www.webmasterworld.com/forum91/4527.htm
  */
@@ -171,7 +181,6 @@ function appendTextboxAsCsv(formName, field, oLink) {
 	txt.value = txt.value + sAppend;
 }
 
-// [TODO] Merge this into genericAjaxPopup
 var loadingPanel;
 function showLoadingPanel() {
 	if(null != loadingPanel) {
@@ -179,15 +188,15 @@ function showLoadingPanel() {
 	}
 	
 	var options = {
-		bgiframe : true,
-		autoOpen : false,
-		closeOnEscape : false,
-		draggable : false,
-		resizable : false,
-		modal : true,
-		width : '300px',
-		title : 'Running...'
-	};
+			bgiframe : true,
+			autoOpen : false,
+			closeOnEscape : false,
+			draggable : false,
+			resizable : false,
+			modal : true,
+			width : "300",
+			title : 'Running...'
+		};
 
 	if(0 == $("#loadingPanel").length) {
 		$("body").append("<div id='loadingPanel' style='display:none;'></div>");
@@ -208,66 +217,16 @@ function hideLoadingPanel() {
 	loadingPanel = null;
 }
 
-function genericAjaxPopupFind($sel) {
-	$devblocksPopups = $('#devblocksPopups');
-	$data = $devblocksPopups.data();
-	$element = $($sel).closest('DIV.devblocks-popup');
-	for($key in $data) {
-		if($element.attr('id') == $data[$key].attr('id'))
-			return $data[$key];
+var genericPanel;
+function genericAjaxPanel(request,target,modal,width,cb) {
+	// Reset
+	if(null != genericPanel) {
+		genericPanel.unbind();
+		genericPanel.dialog('destroy');
+		genericPanel = null;
 	}
-	
-	return null;
-}
 
-function genericAjaxPopupFetch($layer) {
-	return $('#devblocksPopups').data($layer);
-}
-
-function genericAjaxPopupClose($layer, $event) {
-	$popup = genericAjaxPopupFetch($layer);
-	if(null != $popup) {
-		try {
-			if(null != $event)
-				$popup.trigger($event);
-			$popup.dialog('close');
-		} catch(e) { }
-		return true;
-	}
-	return false;
-}
-
-function genericAjaxPopupDestroy($layer) {
-	$popup = genericAjaxPopupFetch($layer);
-	if(null != $popup) {
-		genericAjaxPopupClose($layer);
-		try {
-			$popup.dialog('destroy');
-			$popup.unbind();
-		} catch(e) { }
-		$($('#devblocksPopups').data($layer)).remove(); // remove DOM
-		$('#devblocksPopups').removeData($layer); // remove from registry
-		return true;
-	}
-	return false;
-}
-
-function genericAjaxPopupRegister($layer, $popup) {
-	$devblocksPopups = $('#devblocksPopups');
-	
-	if(0 == $devblocksPopups.length) {
-		$('body').append("<div id='devblocksPopups' style='display:none;'></div>");
-		$devblocksPopups = $('#devblocksPopups');
-	}
-	
-	$('#devblocksPopups').data($layer, $popup);
-}
-
-function genericAjaxPopup($layer,request,target,modal,width,cb) {
-	// Reset (if exists)
-	genericAjaxPopupDestroy($layer);
-	
-	// Default options
+	// Options
 	var options = {
 		bgiframe : true,
 		autoOpen : false,
@@ -275,30 +234,25 @@ function genericAjaxPopup($layer,request,target,modal,width,cb) {
 		draggable : true,
 		modal : false,
 		stack: true,
-		width : '300px',
+		width : "300",
 		close: function(event, ui) { 
 			$(this).unbind();
 		}
 	};
 	
-	if(null != width) options.width = width + 'px'; // [TODO] Fixed the forced 'px' later
+	if(null != width) options.width = width;
 	if(null != modal) options.modal = modal;
 	
-	// Load the popup content
-	$options = { async: false }
-	genericAjaxGet('',request + '&layer=' + $layer,
+	genericAjaxGet('',request,
 		function(html) {
-			$popup = $("#popup"+$layer);
-			if(0 == $popup.length) {
-				$("body").append("<div id='popup"+$layer+"' class='devblocks-popup' style='display:none;'></div>");
-				$popup = $('#popup'+$layer);
+			if(0 == $("#genericPanel").length) {
+				$("body").append("<div id='genericPanel' style='display:none;'></div>");
 			}
-
-			// Persist
-			genericAjaxPopupRegister($layer, $popup);
+			
+			genericPanel = $("#genericPanel");
 			
 			// Set the content
-			$popup.html(html);
+			genericPanel.html(html);
 			
 			// Target
 			if(null != target) {
@@ -310,22 +264,24 @@ function genericAjaxPopup($layer,request,target,modal,width,cb) {
 			} else {
 				options.position = [ 'center', 'top' ];
 			}
-
+			
 			// Render
-			$popup.dialog(options);
-			$popup.dialog('open');
-			$popup.trigger('popup_open');
+			genericPanel.dialog(options);
+			genericPanel.dialog('open');
+			
+			// Focus
+			//if(null != target) {
+				//var offset = $(target).offset();
+				//$(document).scrollTop(offset.top); // Focus
+			//}
 			
 			// Callback
 			try { cb(html); } catch(e) { }
-		},
-		$options
+		}
 	);
-	
-	return $popup;
 }
 
-function genericAjaxPopupPostCloseReloadView($layer, frm, view_id, has_output, $event) {
+function genericAjaxPanelPostCloseReloadView(frm, view_id, has_output) {
 	var has_view = (null != view_id && view_id.length > 0 && $('#view'+view_id).length > 0) ? true : false;
 	if(null == has_output)
 		has_output = false;
@@ -345,16 +301,20 @@ function genericAjaxPopupPostCloseReloadView($layer, frm, view_id, has_output, $
 			if(has_view)
 				$('#view'+view_id).fadeTo("normal", 1.0);
 
-			$popup = genericAjaxPopupFetch($layer);
-			if(null != $popup) {
-				$popup.trigger('popup_saved');
-				genericAjaxPopupClose($layer, $event);
+			if(null != genericPanel) {
+				genericPanel.trigger('devblocks_dialogsaved');
+				
+				try {
+					genericPanel.unbind();
+					genericPanel.dialog('destroy');
+					genericPanel = null;
+				} catch(e) {}
 			}
 		}
 	);
 }
 
-function genericAjaxGet(divName,args,cb,options) {
+function genericAjaxGet(divName,args,cb) {
 	if(null == divName || 0 == divName.length)
 		divName = 'null';
 
@@ -364,23 +324,18 @@ function genericAjaxGet(divName,args,cb,options) {
 		var cb = function(html) {
 			$('#'+divName).html(html);
 			$('#'+divName).fadeTo("normal", 1.0);
-			$('#'+divName).trigger('view_refresh');
 		}
 	}
 	
-	// Allow custom options
-	if(null == options)
-		options = { };
-	
-	options.type = 'GET';
-	options.url = DevblocksAppPath+'ajax.php?'+args;
-	options.cache = false;
-	options.success = cb;
-	
-	$.ajax(options);
+	$.ajax( {
+		type: "GET",
+		url: DevblocksAppPath+'ajax.php?'+args,
+		cache: false,
+		success : cb 
+	} );
 }
 
-function genericAjaxPost(formName,divName,args,cb,options) {
+function genericAjaxPost(formName,divName,args,cb) {
 	if(null == divName || 0 == divName.length)
 		divName = 'null';
 	
@@ -390,21 +345,16 @@ function genericAjaxPost(formName,divName,args,cb,options) {
 		var cb = function(html) {
 			$('#'+divName).html(html);
 			$('#'+divName).fadeTo("normal", 1.0);
-			$('#'+divName).trigger('view_refresh');
 		};
 	}
 
-	// Allow custom options
-	if(null == options)
-		options = { };
-	
-	options.type = 'POST';
-	options.data = $('#'+formName).serialize();
-	options.url = DevblocksAppPath+'ajax.php'+(null!=args?('?'+args):''),
-	options.cache = false;
-	options.success = cb;
-	
-	$.ajax(options);
+	$.ajax( {
+		type: "POST",
+		url: DevblocksAppPath+'ajax.php'+(null!=args?('?'+args):''),
+		data: $('#'+formName).serialize(),
+		cache: false,
+		success: cb 
+	} );
 }
 
 function devblocksAjaxDateChooser(field, div, options) {
