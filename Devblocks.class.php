@@ -694,7 +694,7 @@ class DevblocksPlatform extends DevblocksEngine {
 				"FROM %sextension e ".
 				"INNER JOIN %splugin p ON (e.plugin_id=p.id) ".
 				"WHERE p.enabled = 1 ".
-				"ORDER BY e.plugin_id ASC, e.pos ASC",
+				"ORDER BY e.id ASC, e.plugin_id ASC, e.pos ASC",
 					$prefix,
 					$prefix
 				);
