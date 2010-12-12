@@ -58,7 +58,7 @@ if(!isset($tables['devblocks_setting'])) {
 if(!isset($tables['devblocks_template'])) {
 	$sql = "
 		CREATE TABLE IF NOT EXISTS devblocks_template (
-	    	id INT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,
+	    	id INT UNSIGNED DEFAULT 0 NOT NULL,
 	    	plugin_id VARCHAR(255) DEFAULT '' NOT NULL,
 			path VARCHAR(255) DEFAULT '' NOT NULL,
 			tag VARCHAR(255) DEFAULT '' NOT NULL,
@@ -68,16 +68,6 @@ if(!isset($tables['devblocks_template'])) {
 		) ENGINE=MyISAM;
 	";
 	$db->Execute($sql);	
-}
-
-// Update key
-list($columns, $indexes) = $db->metaTable('devblocks_template');
-
-if(isset($columns['id']) 
-	&& ('int(10) unsigned' != $columns['id']['type'] 
-	|| 'auto_increment' != $columns['id']['extra'])
-) {
-	$db->Execute("ALTER TABLE devblocks_template MODIFY COLUMN id INT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE");
 }
 
 // ===========================================================================
@@ -151,7 +141,7 @@ if(isset($columns['params'])
 if(!isset($tables['devblocks_storage_profile'])) {
 	$sql = "
 		CREATE TABLE IF NOT EXISTS devblocks_storage_profile (
-			id INT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,
+			id int(11) NOT NULL DEFAULT 0,
 			name varchar(128) NOT NULL DEFAULT '',
 			extension_id varchar(255) NOT NULL DEFAULT '',
 			params_json longtext,
