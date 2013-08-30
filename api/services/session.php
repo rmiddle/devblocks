@@ -45,7 +45,7 @@ class _DevblocksSessionManager {
 				array($handler_class, 'gc')
 			);
 
-			$session_lifespan = DevblocksPlatform::getPluginSetting('cerberusweb.core', CerberusSettings::SESSION_LIFESPAN, CerberusSettingsDefaults::SESSION_LIFESPAN);
+			$session_lifespan = DevblocksPlatform::getPluginSetting('feg.core', FegSettings::SESSION_LIFESPAN, FegSettingsDefaults::SESSION_LIFESPAN);
 
 			session_name(APP_SESSION_NAME);
 			session_set_cookie_params($session_lifespan, '/', NULL, $url_writer->isSSL(), true);
