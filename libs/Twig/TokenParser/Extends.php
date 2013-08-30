@@ -9,22 +9,46 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
+
+/**
+ * Extends a template by another one.
+ *
+ * <pre>
+ *  {% extends "base.html" %}
+ * </pre>
+ */
 class Twig_TokenParser_Extends extends Twig_TokenParser
 {
-  public function parse(Twig_Token $token)
-  {
-    if (null !== $this->parser->getParent())
+    /**
+     * Parses a token and returns a node.
+     *
+     * @param Twig_Token $token A Twig_Token instance
+     *
+     * @return Twig_NodeInterface A Twig_NodeInterface instance
+     */
+    public function parse(Twig_Token $token)
     {
-      throw new Twig_SyntaxError('Multiple extend tags are forbidden', $token->getLine());
+        if (!$this->parser->isMainScope()) {
+            throw new Twig_Error_Syntax('Cannot extend from a block', $token->getLine());
+        }
+
+        if (null !== $this->parser->getParent()) {
+            throw new Twig_Error_Syntax('Multiple extends tags are forbidden', $token->getLine());
+        }
+        $this->parser->setParent($this->parser->getExpressionParser()->parseExpression());
+
+        $this->parser->getStream()->expect(Twig_Token::BLOCK_END_TYPE);
+
+        return null;
     }
-    $this->parser->setParent($this->parser->getStream()->expect(Twig_Token::STRING_TYPE)->getValue());
-    $this->parser->getStream()->expect(Twig_Token::BLOCK_END_TYPE);
 
-    return null;
-  }
-
-  public function getTag()
-  {
-    return 'extends';
-  }
+    /**
+     * Gets the tag name associated with this token parser.
+     *
+     * @return string The tag name
+     */
+    public function getTag()
+    {
+        return 'extends';
+    }
 }

@@ -9,33 +9,72 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
+
+/**
+ * Includes a template.
+ *
+ * <pre>
+ *   {% include 'header.html' %}
+ *     Body
+ *   {% include 'footer.html' %}
+ * </pre>
+ */
 class Twig_TokenParser_Include extends Twig_TokenParser
 {
-  public function parse(Twig_Token $token)
-  {
-    $expr = $this->parser->getExpressionParser()->parseExpression();
-
-    $sandboxed = false;
-    if ($this->parser->getStream()->test(Twig_Token::NAME_TYPE, 'sandboxed'))
+    /**
+     * Parses a token and returns a node.
+     *
+     * @param Twig_Token $token A Twig_Token instance
+     *
+     * @return Twig_NodeInterface A Twig_NodeInterface instance
+     */
+    public function parse(Twig_Token $token)
     {
-      $this->parser->getStream()->next();
-      $sandboxed = true;
+        $expr = $this->parser->getExpressionParser()->parseExpression();
+
+        list($variables, $only, $ignoreMissing) = $this->parseArguments();
+
+        return new Twig_Node_Include($expr, $variables, $only, $ignoreMissing, $token->getLine(), $this->getTag());
     }
 
-    $variables = null;
-    if ($this->parser->getStream()->test(Twig_Token::NAME_TYPE, 'with'))
+    protected function parseArguments()
     {
-      $this->parser->getStream()->next();
-      $variables = $this->parser->getExpressionParser()->parseExpression();
+        $stream = $this->parser->getStream();
+
+        $ignoreMissing = false;
+        if ($stream->test(Twig_Token::NAME_TYPE, 'ignore')) {
+            $stream->next();
+            $stream->expect(Twig_Token::NAME_TYPE, 'missing');
+
+            $ignoreMissing = true;
+        }
+
+        $variables = null;
+        if ($stream->test(Twig_Token::NAME_TYPE, 'with')) {
+            $stream->next();
+
+            $variables = $this->parser->getExpressionParser()->parseExpression();
+        }
+
+        $only = false;
+        if ($stream->test(Twig_Token::NAME_TYPE, 'only')) {
+            $stream->next();
+
+            $only = true;
+        }
+
+        $stream->expect(Twig_Token::BLOCK_END_TYPE);
+
+        return array($variables, $only, $ignoreMissing);
     }
 
-    $this->parser->getStream()->expect(Twig_Token::BLOCK_END_TYPE);
-
-    return new Twig_Node_Include($expr, $sandboxed, $variables, $token->getLine(), $this->getTag());
-  }
-
-  public function getTag()
-  {
-    return 'include';
-  }
+    /**
+     * Gets the tag name associated with this token parser.
+     *
+     * @return string The tag name
+     */
+    public function getTag()
+    {
+        return 'include';
+    }
 }

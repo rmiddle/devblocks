@@ -9,121 +9,53 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-class Twig_Node_Expression_Filter extends Twig_Node_Expression implements Twig_NodeListInterface
+class Twig_Node_Expression_Filter extends Twig_Node_Expression
 {
-  protected $node;
-  protected $filters;
-
-  public function __construct(Twig_Node $node, array $filters, $lineno, $tag = null)
-  {
-    parent::__construct($lineno, $tag);
-
-    $this->node = $node;
-    $this->filters = $filters;
-  }
-
-  public function __toString()
-  {
-    $filters = array();
-    foreach ($this->filters as $filter)
+    public function __construct(Twig_NodeInterface $node, Twig_Node_Expression_Constant $filterName, Twig_NodeInterface $arguments, $lineno, $tag = null)
     {
-      $filters[] = $filter[0].'('.implode(', ', $filter[1]).')';
+        parent::__construct(array('node' => $node, 'filter' => $filterName, 'arguments' => $arguments), array(), $lineno, $tag);
     }
 
-    $repr = array(get_class($this).'(');
-
-    foreach (explode("\n", $this->node->__toString()) as $line)
+    public function compile(Twig_Compiler $compiler)
     {
-      $repr[] = '  '.$line;
+        $name = $this->getNode('filter')->getAttribute('value');
+
+        if (false === $filter = $compiler->getEnvironment()->getFilter($name)) {
+            $message = sprintf('The filter "%s" does not exist', $name);
+            if ($alternatives = $compiler->getEnvironment()->computeAlternatives($name, array_keys($compiler->getEnvironment()->getFilters()))) {
+                $message = sprintf('%s. Did you mean "%s"', $message, implode('", "', $alternatives));
+            }
+
+            throw new Twig_Error_Syntax($message, $this->getLine());
+        }
+
+        $this->compileFilter($compiler, $filter);
     }
 
-    $repr[] = '  ('.implode(', ', $filters).')';
-    $repr[] = ')';
-
-    return implode("\n", $repr);
-  }
-
-  public function getNodes()
-  {
-    return array($this->node);
-  }
-
-  public function setNodes(array $nodes)
-  {
-    $this->node = $nodes[0];
-  }
-
-  public function compile($compiler)
-  {
-    $filterMap = $compiler->getEnvironment()->getFilters();
-
-    $postponed = array();
-    for ($i = count($this->filters) - 1; $i >= 0; --$i)
+    protected function compileFilter(Twig_Compiler $compiler, Twig_FilterInterface $filter)
     {
-      list($name, $attrs) = $this->filters[$i];
-      if (!isset($filterMap[$name]))
-      {
         $compiler
-          ->raw('$this->resolveMissingFilter(')
-          ->repr($name)
-          ->raw(', ')
+            ->raw($filter->compile().'(')
+            ->raw($filter->needsEnvironment() ? '$this->env, ' : '')
+            ->raw($filter->needsContext() ? '$context, ' : '')
         ;
-      }
-      else
-      {
-        $compiler->raw($filterMap[$name]->compile().($filterMap[$name]->needsEnvironment() ? '($this->getEnvironment(), ' : '('));
-      }
-      $postponed[] = $attrs;
+
+        foreach ($filter->getArguments() as $argument) {
+            $compiler
+                ->string($argument)
+                ->raw(', ')
+            ;
+        }
+
+        $compiler->subcompile($this->getNode('node'));
+
+        foreach ($this->getNode('arguments') as $node) {
+            $compiler
+                ->raw(', ')
+                ->subcompile($node)
+            ;
+        }
+
+        $compiler->raw(')');
     }
-    $this->node->compile($compiler);
-    foreach (array_reverse($postponed) as $attributes)
-    {
-      foreach ($attributes as $node)
-      {
-        $compiler
-          ->raw(', ')
-          ->subcompile($node)
-        ;
-      }
-      $compiler->raw(')');
-    }
-  }
-
-  public function getFilters()
-  {
-    return $this->filters;
-  }
-
-  public function setFilters(array $filters)
-  {
-    $this->filters = $filters;
-  }
-
-  public function prependFilter($filter)
-  {
-    $this->filters = array_merge(array($filter), $this->filters);
-  }
-
-  public function appendFilter($filter)
-  {
-    $this->filters[] = $filter;
-  }
-
-  public function appendFilters(array $filters)
-  {
-    $this->filters = array_merge($this->filters, $filters);
-  }
-
-  public function hasFilter($name)
-  {
-    foreach ($this->filters as $filter)
-    {
-      if ($name == $filter[0])
-      {
-        return true;
-      }
-    }
-
-    return false;
-  }
 }

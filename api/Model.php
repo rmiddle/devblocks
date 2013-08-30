@@ -1,40 +1,50 @@
 <?php
-interface IDevblocksTourListener {
-    function registerCallouts();
-}
 class DevblocksTourCallout {
-    public $id = '';
-    public $title = '';
-    public $body = '';
-    
-    function __construct($id,$title='Callout',$body='...') {
-        $this->id = $id;
-        $this->title = $title;
-        $this->body = $body;
-    }
+	public $selector = '';
+	public $title = '';
+	public $body = '';
+	public $tipCorner = '';
+	public $targetCorner = '';
+	public $xOffset = 0;
+	public $yOffset = 0;
+	
+	function __construct($selector='',$title='Callout',$body='...',$tipCorner='topLeft',$targetCorner='topLeft',$xOffset=0,$yOffset=0) {
+		$this->selector = $selector;
+		$this->title = $title;
+		$this->body = $body;
+		$this->tipCorner = $tipCorner;
+		$this->targetCorner = $targetCorner;
+		$this->xOffset = $xOffset;
+		$this->yOffset = $yOffset;
+	}
 };
 interface IDevblocksSearchFields {
-    static function getFields();
+	static function getFields();
 }
 class DevblocksSearchCriteria {
-    const OPER_EQ = '=';
-    const OPER_EQ_OR_NULL = 'equals or null';
-    const OPER_NEQ = '!=';
-    const OPER_IN = 'in';
-    const OPER_IS_NULL = 'is null';
-    const OPER_NIN = 'not in';
-    const OPER_FULLTEXT = 'fulltext';
-    const OPER_LIKE = 'like';
-    const OPER_NOT_LIKE = 'not like';
-    const OPER_GT = '>';
-    const OPER_LT = '<';
-    const OPER_GTE = '>=';
-    const OPER_LTE = '<=';
-    const OPER_BETWEEN = 'between';
-    
-    const GROUP_OR = 'OR';
-    const GROUP_AND = 'AND';
-    
+	const OPER_EQ = '=';
+	const OPER_EQ_OR_NULL = 'equals or null';
+	const OPER_NEQ = '!=';
+	const OPER_IS_NULL = 'is null';
+	const OPER_IS_NOT_NULL = 'is not null';
+	const OPER_IN = 'in';
+	const OPER_IN_OR_NULL = 'in or null';
+	const OPER_NIN = 'not in';
+	const OPER_NIN_OR_NULL = 'not in or null';
+	const OPER_FULLTEXT = 'fulltext';
+	const OPER_LIKE = 'like';
+	const OPER_NOT_LIKE = 'not like';
+	const OPER_GT = '>';
+	const OPER_LT = '<';
+	const OPER_GTE = '>=';
+	const OPER_LTE = '<=';
+	const OPER_BETWEEN = 'between';
+	const OPER_NOT_BETWEEN = 'not between';
+	const OPER_TRUE = '1';
+	
+	const GROUP_OR = 'OR';
+	const GROUP_AND = 'AND';
+	
 	public $field;
 	public $operator;
 	public $value;
@@ -53,15 +63,11 @@ class DevblocksSearchCriteria {
 		$this->value = $value;
 	}
 	
-	/*
-	 * [TODO] [JAS] Having to pass $fields here is kind of silly, but I'm ignoring 
-	 * for now since it's only called in 2 abstracted places.
-	 */
 	public function getWhereSQL($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
 		$where = '';
 		
-		$db_field_name = $fields[$this->field]->db_table . '.' . $fields[$this->field]->db_column; 
+		$db_field_name = $fields[$this->field]->db_table . '.' . $fields[$this->field]->db_column;
 
 		// [JAS]: Operators
 		switch($this->operator) {
@@ -90,42 +96,174 @@ class DevblocksSearchCriteria {
 				break;
 			
 			case "in":
-				if(!is_array($this->value)) break;
-				$value = (!empty($this->value)) ? $this->value : array(-1);
+				if(!is_array($this->value) && !is_string($this->value))
+					break;
+				
+				if(!is_array($this->value) && preg_match('#^\[.*\]$#', $this->value)) {
+					$values = json_decode($this->value, true);
+					
+				} elseif(is_array($this->value)) {
+					$values = $this->value;
+					
+				} else {
+					$values = array($this->value);
+					
+				}
+				
 				$vals = array();
 				
 				// Escape quotes
-				foreach($this->value as $idx=>$val) {
-					$vals[$idx] = addslashes($val); // [TODO] Test
+				foreach($values as $idx=>$val) {
+					$vals[$idx] = $db->qstr((string)$val);
 				}
 				
-				$where = sprintf("%s IN ('%s')",
+				if(empty($vals))
+					$vals = array(-1);
+				
+				$where = sprintf("%s IN (%s)",
 					$db_field_name,
-					implode("','",$vals)
+					implode(",", $vals)
+				);
+				break;
+				
+			case DevblocksSearchCriteria::OPER_IN_OR_NULL:
+				if(!is_array($this->value) && !is_string($this->value))
+					break;
+				
+				if(!is_array($this->value) && preg_match('#^\[.*\]$#', $this->value)) {
+					$values = json_decode($this->value, true);
+					
+				} elseif(is_array($this->value)) {
+					$values = $this->value;
+					
+				} else {
+					$values = array($this->value);
+					
+				}
+				
+				$vals = array();
+				
+				// Escape quotes
+				foreach($values as $idx=>$val) {
+					$vals[$idx] = $db->qstr((string)$val);
+				}
+
+				$where_in = '';
+				
+				if(empty($vals)) {
+					$where_in = '';
+					
+				} else {
+					$where_in = sprintf("%s IN (%s) OR ",
+						$db_field_name,
+						implode(",",$vals)
+					);
+				}
+				
+				$where = sprintf("(%s%s IS NULL)",
+					$where_in,
+					$db_field_name
 				);
 				break;
 
 			case DevblocksSearchCriteria::OPER_NIN: // 'not in'
-				if(!is_array($this->value)) break;
-				$value = (!empty($this->value)) ? $this->value : array(-1);
-				$where = sprintf("%s NOT IN ('%s')",
+				if(!is_array($this->value) && !is_string($this->value))
+					break;
+				
+				if(!is_array($this->value) && preg_match('#^\[.*\]$#', $this->value)) {
+					$values = json_decode($this->value, true);
+					
+				} elseif(is_array($this->value)) {
+					$values = $this->value;
+					
+				} else {
+					$values = array($this->value);
+					
+				}
+				
+				$vals = array();
+				
+				// Escape quotes
+				foreach($values as $idx=>$val) {
+					$vals[$idx] = $db->qstr((string)$val);
+				}
+
+				if(empty($vals))
+					$vals = array(-1);
+				
+				$where = sprintf("%s NOT IN (%s)",
 					$db_field_name,
-					implode("','",$value)
+					implode(",",$vals)
+				);
+				break;
+				
+			case DevblocksSearchCriteria::OPER_NIN_OR_NULL:
+				if(!is_array($this->value) && !is_string($this->value))
+					break;
+				
+				if(!is_array($this->value) && preg_match('#^\[.*\]$#', $this->value)) {
+					$values = json_decode($this->value, true);
+					
+				} elseif(is_array($this->value)) {
+					$values = $this->value;
+					
+				} else {
+					$values = array($this->value);
+					
+				}
+				
+				$vals = array();
+				
+				// Escape quotes
+				foreach($values as $idx=>$val) {
+					$vals[$idx] = $db->qstr((string)$val);
+				}
+				
+				$where_in = '';
+				
+				if(empty($vals)) {
+					$where_in = '';
+					
+				} else {
+					$where_in = sprintf("%s NOT IN (%s) OR ",
+						$db_field_name,
+						implode(",",$vals)
+					);
+				}
+				
+				$where = sprintf("(%s%s IS NULL)",
+					$where_in,
+					$db_field_name
 				);
 				break;
 				
 			case DevblocksSearchCriteria::OPER_FULLTEXT: // 'fulltext'
 				$search = DevblocksPlatform::getSearchService();
 
+				$values = array();
 				$value = null;
 				$scope = null;
+
+				if(!is_array($this->value) && !is_string($this->value))
+					break;
 				
-				if(!is_array($this->value)) {
-					$value = $this->value;
-					$scope = 'expert'; 
+				if(!is_array($this->value) && preg_match('#^\[.*\]$#', $this->value)) {
+					$values = json_decode($this->value, true);
+					
+				} elseif(is_array($this->value)) {
+					$values = $this->value;
+					
 				} else {
-					$value = $this->value[0];
-					$scope = $this->value[1]; 
+					$values = $this->value;
+					
+				}
+				
+				if(!is_array($values)) {
+					$value = $values;
+					$scope = 'expert';
+				} else {
+					$value = $values[0];
+					$scope = $values[1];
 				}
 				
 				switch($scope) {
@@ -141,6 +279,8 @@ class DevblocksSearchCriteria {
 						break;
 					default:
 					case 'expert':
+						$value = DevblocksPlatform::strUnidecode($value);
+						// We don't want to strip punctuation in expert mode
 						break;
 				}
 				
@@ -169,12 +309,25 @@ class DevblocksSearchCriteria {
 					$db_field_name
 				);
 				break;
+				
+			case DevblocksSearchCriteria::OPER_IS_NOT_NULL:
+				$where = sprintf("%s IS NOT NULL",
+					$db_field_name
+				);
+				break;
 			
+			case DevblocksSearchCriteria::OPER_TRUE:
+				$where = '1';
+				break;
+				
 			/*
-			 * [TODO] Someday we may want to call this OPER_DATE_BETWEEN so it doesn't interfere 
+			 * [TODO] Someday we may want to call this OPER_DATE_BETWEEN so it doesn't interfere
 			 * with the operator in other uses
 			 */
 			case DevblocksSearchCriteria::OPER_BETWEEN: // 'between'
+			case DevblocksSearchCriteria::OPER_NOT_BETWEEN: // 'not between'
+				$not = $this->operator == DevblocksSearchCriteria::OPER_NOT_BETWEEN ? true : false;
+				
 				if(!is_array($this->value) && 2 != count($this->value))
 					break;
 					
@@ -189,6 +342,7 @@ class DevblocksSearchCriteria {
 				}
 				
 				$to_date = $this->value[1];
+				
 				if(!is_numeric($to_date)) {
 					// Translate periods into dashes on string dates
 					if(false !== strpos($to_date,'.'))
@@ -199,15 +353,26 @@ class DevblocksSearchCriteria {
 				}
 				
 				if(0 == $from_date) {
-					$where = sprintf("(%s IS NULL OR %s BETWEEN %s and %s)",
-						$db_field_name,
-						$db_field_name,
-						$from_date,
-						$to_date
-					);
+					if($not) {
+						$where = sprintf("(%s IS NOT NULL AND %s NOT BETWEEN %s and %s)",
+							$db_field_name,
+							$db_field_name,
+							$from_date,
+							$to_date
+						);
+					} else {
+						$where = sprintf("(%s IS NULL OR %s BETWEEN %s and %s)",
+							$db_field_name,
+							$db_field_name,
+							$from_date,
+							$to_date
+						);
+						
+					}
 				} else {
-					$where = sprintf("%s BETWEEN %s and %s",
+					$where = sprintf("%s %sBETWEEN %s and %s",
 						$db_field_name,
+						($not ? 'NOT ' : ''),
 						$from_date,
 						$to_date
 					);
@@ -223,7 +388,7 @@ class DevblocksSearchCriteria {
 					$this->operator,
 					self::_escapeSearchParam($this, $fields)
 				);
-			    break;
+				break;
 				
 			default:
 				break;
@@ -233,36 +398,38 @@ class DevblocksSearchCriteria {
 	}
 	
 	static protected function _escapeSearchParam(DevblocksSearchCriteria $param, $fields) {
-	    $db = DevblocksPlatform::getDatabaseService();
-	    $field = $fields[$param->field];
-	    $where_value = null;
+		$db = DevblocksPlatform::getDatabaseService();
+		$field = $fields[$param->field];
+		$where_value = null;
 
-	    if($field) {
-	    	if(!is_array($param->value)) {
-	    		$where_value = $db->qstr($param->value);
-	    	} else {
-	    		$where_value = array();
-	    		foreach($param->value as $v) {
-	    			$where_value[] = $db->qstr($v);
-	    		}
-	    	}
-	    }
+		if($field) {
+			if(!is_array($param->value)) {
+				$where_value = $db->qstr($param->value);
+			} else {
+				$where_value = array();
+				foreach($param->value as $v) {
+					$where_value[] = $db->qstr($v);
+				}
+			}
+		}
 
-        return $where_value;
+		return $where_value;
 	}
-	
 };
+
 class DevblocksSearchField {
 	public $token;
 	public $db_table;
 	public $db_column;
 	public $db_label;
+	public $type;
 	
-	function __construct($token, $db_table, $db_column, $db_label=null) {
+	function __construct($token, $db_table, $db_column, $label=null, $type=null) {
 		$this->token = $token;
 		$this->db_table = $db_table;
 		$this->db_column = $db_column;
-		$this->db_label = $db_label;
+		$this->db_label = $label;
+		$this->type = $type;
 	}
 };
 
@@ -273,15 +440,15 @@ class DevblocksAclPrivilege {
 };
 
 class DevblocksEventPoint {
-    var $id = '';
-    var $plugin_id = '';
-    var $name = '';
-    var $param = array();
+	var $id = '';
+	var $plugin_id = '';
+	var $name = '';
+	var $param = array();
 };
 
 class DevblocksExtensionPoint {
 	var $id = '';
-    var $plugin_id = '';
+	var $plugin_id = '';
 	var $extensions = array();
 };
 
@@ -289,6 +456,7 @@ class DevblocksTemplate {
 	var $set = '';
 	var $plugin_id = '';
 	var $path = '';
+	var $sort_key = '';
 };
 
 /**
@@ -301,7 +469,7 @@ class DevblocksPluginManifest {
 	var $name = '';
 	var $description = '';
 	var $author = '';
-	var $revision = 0;
+	var $version = 0;
 	var $link = '';
 	var $dir = '';
 	var $manifest_cache = array();
@@ -313,6 +481,8 @@ class DevblocksPluginManifest {
 	var $uri_routing = array();
 	var $extensions = array();
 	
+	var $_requirements_errors = array();
+	
 	function setEnabled($bool) {
 		$this->enabled = ($bool) ? 1 : 0;
 		
@@ -321,6 +491,20 @@ class DevblocksPluginManifest {
 			'enabled' => $this->enabled
 		);
 		DAO_Platform::updatePlugin($this->id, $fields);
+	}
+	
+	/**
+	 *
+	 */
+	function getActivityPoints() {
+		$points = array();
+
+		if(isset($this->manifest_cache['activity_points']))
+		foreach($this->manifest_cache['activity_points'] as $point=> $data) {
+			$points[$point] = $data;
+		}
+		
+		return $points;
 	}
 	
 	/**
@@ -338,22 +522,124 @@ class DevblocksPluginManifest {
 		return $patches;
 	}
 	
+	function checkRequirements() {
+		$this->_requirements_errors = array();
+		
+		switch($this->id) {
+			case 'devblocks.core':
+			case 'cerberusweb.core':
+				return true;
+				break;
+		}
+		
+		// Check version information
+		if(
+			null != (@$plugin_app_version = $this->manifest_cache['requires']['app_version'])
+			&& isset($plugin_app_version['min'])
+			&& isset($plugin_app_version['max'])
+		) {
+			// If APP_VERSION is below the min or above the max
+			if(DevblocksPlatform::strVersionToInt(APP_VERSION) < DevblocksPlatform::strVersionToInt($plugin_app_version['min']))
+				$this->_requirements_errors[] = 'This plugin requires a Cerb version of at least ' . $plugin_app_version['min'] . ' and you are using ' . APP_VERSION;
+			
+			if(DevblocksPlatform::strVersionToInt(APP_VERSION) > DevblocksPlatform::strVersionToInt($plugin_app_version['max']))
+				$this->_requirements_errors[] = 'This plugin was tested through Cerb version ' . $plugin_app_version['max'] . ' and you are using ' . APP_VERSION;
+			
+		// If no version information is available, fail.
+		} else {
+			$this->_requirements_errors[] = 'This plugin is missing requirements information in its manifest';
+		}
+		
+		// Check PHP extensions
+		if(isset($this->manifest_cache['requires']['php_extensions']))
+		foreach($this->manifest_cache['requires']['php_extensions'] as $php_extension => $data) {
+			if(!extension_loaded($php_extension))
+				$this->_requirements_errors[] = sprintf("The '%s' PHP extension is required", $php_extension);
+		}
+		
+		// Check dependencies
+		if(isset($this->manifest_cache['dependencies'])) {
+			$plugins = DevblocksPlatform::getPluginRegistry();
+			foreach($this->manifest_cache['dependencies'] as $dependency) {
+				if(!isset($plugins[$dependency])) {
+					$this->_requirements_errors[] = sprintf("The '%s' plugin is required", $dependency);
+				} else if(!$plugins[$dependency]->enabled) {
+					$dependency_name = isset($plugins[$dependency]) ? $plugins[$dependency]->name : $dependency;
+					$this->_requirements_errors[] = sprintf("The '%s' (%s) plugin must be enabled first", $dependency_name, $dependency);
+				}
+			}
+		}
+		
+		// Status
+		
+		if(!empty($this->_requirements_errors))
+			return false;
+		
+		return true;
+	}
+	
+	function getRequirementsErrors() {
+		if(empty($this->_requirements_errors))
+			$this->checkRequirements();
+		
+		return $this->_requirements_errors;
+	}
+	
 	function purge() {
 		$db = DevblocksPlatform::getDatabaseService();
 		$prefix = (APP_DB_PREFIX != '') ? APP_DB_PREFIX.'_' : ''; // [TODO] Cleanup
 		
-        $db->Execute(sprintf("DELETE FROM %splugin WHERE id = %s",
-            $prefix,
-            $db->qstr($this->id)
-        ));
-        $db->Execute(sprintf("DELETE FROM %sextension WHERE id = %s",
-            $prefix,
-            $db->qstr($this->id)
-        ));
-        $db->Execute(sprintf("DELETE FROM %sproperty_store WHERE id = %s",
-            $prefix,
-            $db->qstr($this->id)
-        ));
+		$db->Execute(sprintf("DELETE FROM %splugin WHERE id = %s",
+			$prefix,
+			$db->qstr($this->id)
+		));
+		$db->Execute(sprintf("DELETE FROM %sextension WHERE plugin_id = %s",
+			$prefix,
+			$db->qstr($this->id)
+		));
+		$db->Execute(sprintf("DELETE %1\$sproperty_store FROM %1\$sproperty_store ".
+			"LEFT JOIN %1\$sextension ON (%1\$sproperty_store.extension_id=%1\$sextension.id) ".
+			"WHERE %1\$sextension.id IS NULL",
+			$prefix
+		));
+	}
+	
+	function uninstall() {
+		$plugin_path = APP_PATH . '/' . $this->dir;
+		$storage_path = APP_STORAGE_PATH . '/plugins/';
+		
+		// Only delete the files if the plugin is in the storage filesystem.
+		if(0 == substr_compare($plugin_path, $storage_path, 0, strlen($storage_path), true)) {
+			$this->_recursiveDelTree($plugin_path);
+			return true;
+		}
+		
+		return false;
+	}
+	
+	function _recursiveDelTree($dir) {
+		if(!file_exists($dir) || !is_dir($dir))
+			return false;
+		
+		$storage_path = APP_STORAGE_PATH . '/plugins/';
+		$dir = rtrim($dir,"/\\") . '/';
+		
+		if(0 != substr_compare($storage_path, $dir, 0, strlen($storage_path)))
+			return false;
+		
+		$files = glob($dir . '*', GLOB_MARK);
+		foreach($files as $file) {
+			if(is_dir($file)) {
+				$this->_recursiveDelTree($file);
+			} else {
+				unlink($file);
+			}
+		}
+		
+		if(file_exists($dir) && is_dir($dir))
+			rmdir($dir);
+		
+		return true;
 	}
 };
 
@@ -373,15 +659,15 @@ class DevblocksExtensionManifest {
 	function DevblocksExtensionManifest() {}
 	
 	/**
-	 * Creates and loads a usable extension from a manifest record.  The object returned 
-	 * will be of type $class defined by the manifest.  $instance_id is passed as an 
+	 * Creates and loads a usable extension from a manifest record.  The object returned
+	 * will be of type $class defined by the manifest.  $instance_id is passed as an
 	 * argument to uniquely identify multiple instances of an extension.
 	 *
 	 * @param integer $instance_id
 	 * @return object
 	 */
 	function createInstance() {
-		if(empty($this->id) || empty($this->plugin_id)) // empty($instance_id) || 
+		if(empty($this->id) || empty($this->plugin_id)) // empty($instance_id) ||
 			return null;
 
 		if(null == ($plugin = DevblocksPlatform::getPlugin($this->plugin_id)))
@@ -437,7 +723,7 @@ abstract class DevblocksVisit {
 	public function get($key, $default=null) {
 		@$value = $this->registry[$key];
 		
-		if(is_null($value) && !is_null($default)) 
+		if(is_null($value) && !is_null($default))
 			$value = $default;
 			
 		return $value;
@@ -446,11 +732,14 @@ abstract class DevblocksVisit {
 	public function set($key, $object) {
 		$this->registry[$key] = $object;
 	}
+	
+	public function remove($key) {
+		unset($this->registry[$key]);
+	}
 };
 
-
 /**
- * 
+ *
  */
 class DevblocksPatch {
 	private $plugin_id = ''; // cerberusweb.core
@@ -466,11 +755,11 @@ class DevblocksPatch {
 	}
 	
 	public function run() {
-	    if($this->hasRun())
-	        return TRUE;
+		if($this->hasRun())
+			return TRUE;
 
-	    if(empty($this->filename) || !file_exists($this->filename))
-	        return FALSE;
+		if(empty($this->filename) || !file_exists($this->filename))
+			return FALSE;
 
 		if(false === ($result = require_once($this->filename)))
 			return FALSE;
@@ -507,12 +796,12 @@ class DevblocksPatch {
 };
 
 class Model_DevblocksEvent {
-  public $id = '';
-  public $params = array(); 
+	public $id = '';
+	public $params = array();
 
   function __construct($id='',$params=array()) {
-      $this->id = $id;
-      $this->params = $params;
+		$this->id = $id;
+		$this->params = $params;
   }
 };
 
