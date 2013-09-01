@@ -527,7 +527,7 @@ class DevblocksPluginManifest {
 		
 		switch($this->id) {
 			case 'devblocks.core':
-			case 'cerberusweb.core':
+			case 'feg.core':
 				return true;
 				break;
 		}
@@ -742,7 +742,7 @@ abstract class DevblocksVisit {
  *
  */
 class DevblocksPatch {
-	private $plugin_id = ''; // cerberusweb.core
+	private $plugin_id = ''; // feg.core
 	private $version = '';
 	private $revision = 0; // 100
 	private $filename = ''; // 4.0.0.php

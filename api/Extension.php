@@ -360,7 +360,7 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 					case Model_CustomField::TYPE_WORKER:
 						$cfields[$token] = array(
 							'label' => $label,
-							'context' => CerberusContexts::CONTEXT_WORKER,
+							'context' => FegContexts::CONTEXT_WORKER,
 						);
 						break;
 					default:
@@ -423,15 +423,15 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 		
 		switch($token) {
 			case '_month_of_year':
-				return $tpl->display('devblocks:cerberusweb.core::internal/decisions/conditions/_month_of_year.tpl');
+				return $tpl->display('devblocks:feg.core::internal/decisions/conditions/_month_of_year.tpl');
 				break;
 
 			case '_day_of_week':
-				return $tpl->display('devblocks:cerberusweb.core::internal/decisions/conditions/_day_of_week.tpl');
+				return $tpl->display('devblocks:feg.core::internal/decisions/conditions/_day_of_week.tpl');
 				break;
 
 			case '_time_of_day':
-				return $tpl->display('devblocks:cerberusweb.core::internal/decisions/conditions/_time_of_day.tpl');
+				return $tpl->display('devblocks:feg.core::internal/decisions/conditions/_time_of_day.tpl');
 				break;
 			
 			default:
@@ -439,31 +439,31 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 					// Automatic types
 					switch(@$condition['type']) {
 						case Model_CustomField::TYPE_CHECKBOX:
-							return $tpl->display('devblocks:cerberusweb.core::internal/decisions/conditions/_bool.tpl');
+							return $tpl->display('devblocks:feg.core::internal/decisions/conditions/_bool.tpl');
 							break;
 						case Model_CustomField::TYPE_DATE:
-							return $tpl->display('devblocks:cerberusweb.core::internal/decisions/conditions/_date.tpl');
+							return $tpl->display('devblocks:feg.core::internal/decisions/conditions/_date.tpl');
 							break;
 						case Model_CustomField::TYPE_MULTI_LINE:
 						case Model_CustomField::TYPE_SINGLE_LINE:
 						case Model_CustomField::TYPE_URL:
-							return $tpl->display('devblocks:cerberusweb.core::internal/decisions/conditions/_string.tpl');
+							return $tpl->display('devblocks:feg.core::internal/decisions/conditions/_string.tpl');
 							break;
 						case Model_CustomField::TYPE_NUMBER:
-							return $tpl->display('devblocks:cerberusweb.core::internal/decisions/conditions/_number.tpl');
+							return $tpl->display('devblocks:feg.core::internal/decisions/conditions/_number.tpl');
 							break;
 						case Model_CustomField::TYPE_DROPDOWN:
 						case Model_CustomField::TYPE_MULTI_CHECKBOX:
 							$tpl->assign('condition', $condition);
-							return $tpl->display('devblocks:cerberusweb.core::internal/decisions/conditions/_dropdown.tpl');
+							return $tpl->display('devblocks:feg.core::internal/decisions/conditions/_dropdown.tpl');
 							break;
 						case Model_CustomField::TYPE_WORKER:
 							$tpl->assign('workers', DAO_Worker::getAll());
-							return $tpl->display('devblocks:cerberusweb.core::internal/decisions/conditions/_worker.tpl');
+							return $tpl->display('devblocks:feg.core::internal/decisions/conditions/_worker.tpl');
 							break;
 						default:
 							if(@substr($condition['type'],0,4) == 'ctx_') {
-								return $tpl->display('devblocks:cerberusweb.core::internal/decisions/conditions/_number.tpl');
+								return $tpl->display('devblocks:feg.core::internal/decisions/conditions/_number.tpl');
 							
 							} else {
 								// Custom
@@ -862,13 +862,13 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 						
 						switch(@$var['type']) {
 							case Model_CustomField::TYPE_CHECKBOX:
-								return $tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_bool.tpl');
+								return $tpl->display('devblocks:feg.core::internal/decisions/actions/_set_bool.tpl');
 								break;
 							case Model_CustomField::TYPE_DATE:
-								return $tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_date.tpl');
+								return $tpl->display('devblocks:feg.core::internal/decisions/actions/_set_date.tpl');
 								break;
 							case Model_CustomField::TYPE_NUMBER:
-								return $tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_number.tpl');
+								return $tpl->display('devblocks:feg.core::internal/decisions/actions/_set_number.tpl');
 								break;
 							case Model_CustomField::TYPE_SINGLE_LINE:
 								return DevblocksEventHelper::renderActionSetVariableString($this->getLabels());

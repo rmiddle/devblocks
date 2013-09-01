@@ -7,12 +7,12 @@
  |
  | This source code is released under the Devblocks Public License.
  | The latest version of this license can be found here:
- | http://cerberusweb.com/license
+ | http://feg.com/license
  |
  | By using this software, you acknowledge having read this license
  | and agree to be bound thereby.
  | ______________________________________________________________________
- |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+ |	http://www.feg.com	  http://www.webgroupmedia.com/
  ***********************************************************************/
 /*
  * IMPORTANT LICENSING NOTE from your friends on the Cerb Development Team
@@ -95,7 +95,7 @@ class View_DevblocksStorageProfile extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
-		$tpl->display('devblocks:cerberusweb.core::configuration/section/storage_profiles/view.tpl');
+		$tpl->display('devblocks:feg.core::configuration/section/storage_profiles/view.tpl');
 	}
 
 	function renderCriteria($field) {
@@ -105,16 +105,16 @@ class View_DevblocksStorageProfile extends C4_AbstractView {
 		switch($field) {
 			case SearchFields_DevblocksStorageProfile::NAME:
 			case SearchFields_DevblocksStorageProfile::EXTENSION_ID:
-				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
+				$tpl->display('devblocks:feg.core::internal/views/criteria/__string.tpl');
 				break;
 			case SearchFields_DevblocksStorageProfile::ID:
-				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__number.tpl');
+				$tpl->display('devblocks:feg.core::internal/views/criteria/__number.tpl');
 				break;
 			case 'placeholder_bool':
-				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__bool.tpl');
+				$tpl->display('devblocks:feg.core::internal/views/criteria/__bool.tpl');
 				break;
 			case 'placeholder_date':
-				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
+				$tpl->display('devblocks:feg.core::internal/views/criteria/__date.tpl');
 				break;
 			default:
 				echo '';

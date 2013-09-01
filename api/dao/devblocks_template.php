@@ -7,12 +7,12 @@
  |
  | This source code is released under the Devblocks Public License.
  | The latest version of this license can be found here:
- | http://cerberusweb.com/license
+ | http://feg.com/license
  |
  | By using this software, you acknowledge having read this license
  | and agree to be bound thereby.
  | ______________________________________________________________________
- |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+ |	http://www.feg.com	  http://www.webgroupmedia.com/
  ***********************************************************************/
 /*
  * IMPORTANT LICENSING NOTE from your friends on the Cerb Development Team
@@ -86,10 +86,10 @@ class View_DevblocksTemplate extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
-//		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_WORKER);
+//		$custom_fields = DAO_CustomField::getByContext(FegContexts::CONTEXT_WORKER);
 //		$tpl->assign('custom_fields', $custom_fields);
 
-		$tpl->display('devblocks:cerberusweb.core::configuration/section/portal/tabs/templates/view.tpl');
+		$tpl->display('devblocks:feg.core::configuration/section/portal/tabs/templates/view.tpl');
 	}
 
 	function renderCriteria($field) {
@@ -101,10 +101,10 @@ class View_DevblocksTemplate extends C4_AbstractView {
 			case SearchFields_DevblocksTemplate::PATH:
 			case SearchFields_DevblocksTemplate::PLUGIN_ID:
 			case SearchFields_DevblocksTemplate::TAG:
-				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
+				$tpl->display('devblocks:feg.core::internal/views/criteria/__string.tpl');
 				break;
 			case SearchFields_DevblocksTemplate::LAST_UPDATED:
-				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
+				$tpl->display('devblocks:feg.core::internal/views/criteria/__date.tpl');
 				break;
 			default:
 				// Custom Fields
@@ -219,7 +219,7 @@ class View_DevblocksTemplate extends C4_AbstractView {
 				DAO_DevblocksTemplate::delete($batch_ids);
 			
 			// Custom Fields
-//			self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_WORKER, $custom_fields, $batch_ids);
+//			self::_doBulkSetCustomFields(FegContexts::CONTEXT_WORKER, $custom_fields, $batch_ids);
 			
 			unset($batch_ids);
 		}

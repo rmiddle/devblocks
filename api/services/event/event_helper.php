@@ -92,37 +92,37 @@ class DevblocksEventHelper {
 			case Model_CustomField::TYPE_MULTI_LINE:
 			case Model_CustomField::TYPE_SINGLE_LINE:
 			case Model_CustomField::TYPE_URL:
-				$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_var_string.tpl');
+				$tpl->display('devblocks:feg.core::internal/decisions/actions/_set_var_string.tpl');
 				break;
 				
 			case Model_CustomField::TYPE_NUMBER:
-				$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_number.tpl');
+				$tpl->display('devblocks:feg.core::internal/decisions/actions/_set_number.tpl');
 				break;
 				
 			case Model_CustomField::TYPE_CHECKBOX:
-				$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_bool.tpl');
+				$tpl->display('devblocks:feg.core::internal/decisions/actions/_set_bool.tpl');
 				break;
 				
 			case Model_CustomField::TYPE_DATE:
-				$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_date.tpl');
+				$tpl->display('devblocks:feg.core::internal/decisions/actions/_set_date.tpl');
 				break;
 				
 			case Model_CustomField::TYPE_DROPDOWN:
 				$tpl->assign('options', $custom_field->options);
-				$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_dropdown.tpl');
+				$tpl->display('devblocks:feg.core::internal/decisions/actions/_set_dropdown.tpl');
 				$tpl->clearAssign('options');
 				break;
 				
 			case Model_CustomField::TYPE_MULTI_CHECKBOX:
 				$tpl->assign('options', $custom_field->options);
-				$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_multi_checkbox.tpl');
+				$tpl->display('devblocks:feg.core::internal/decisions/actions/_set_multi_checkbox.tpl');
 				$tpl->clearAssign('options');
 				break;
 				
 			case Model_CustomField::TYPE_WORKER:
 				$workers = DAO_Worker::getAllActive();
 				$tpl->assign('workers', $workers);
-				$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_worker.tpl');
+				$tpl->display('devblocks:feg.core::internal/decisions/actions/_set_worker.tpl');
 				break;
 		}
 	}
@@ -465,7 +465,7 @@ class DevblocksEventHelper {
 	static function renderActionSetVariableString($labels) {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('token_labels', $labels);
-		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_var_string.tpl');
+		$tpl->display('devblocks:feg.core::internal/decisions/actions/_set_var_string.tpl');
 	}
 	
 	static function renderActionSetVariableWorker() {
@@ -477,7 +477,7 @@ class DevblocksEventHelper {
 		// Groups
 		$tpl->assign('groups', DAO_Group::getAll());
 		
-		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_var_worker.tpl');
+		$tpl->display('devblocks:feg.core::internal/decisions/actions/_set_var_worker.tpl');
 	}
 	
 	static function renderActionSetListVariable($token, $trigger, $params, $context) {
@@ -498,7 +498,7 @@ class DevblocksEventHelper {
 		$tpl->assign('params', $params);
 		$tpl->assign('view', $view);
 		
-		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_var_list.tpl');
+		$tpl->display('devblocks:feg.core::internal/decisions/actions/_set_var_list.tpl');
 	}
 	
 	static function simulateActionSetVariable($token, $trigger, $params, DevblocksDictionaryDelegate $dict) {
@@ -530,7 +530,7 @@ class DevblocksEventHelper {
 			
 			$fields = array();
 			$null = array();
-			CerberusContexts::getContext($context_extid, null, $fields, $null, null, true);
+			FegContexts::getContext($context_extid, null, $fields, $null, null, true);
 
 			$out .= "\n";
 			
@@ -759,7 +759,7 @@ class DevblocksEventHelper {
 		$values_to_contexts = $event->getValuesContexts($trigger);
 		$tpl->assign('values_to_contexts', $values_to_contexts);
 		
-		$tpl->display('devblocks:cerberusweb.core::events/action_set_links.tpl');
+		$tpl->display('devblocks:feg.core::events/action_set_links.tpl');
 	}
 	
 	static function simulateActionSetLinks($trigger, $params, DevblocksDictionaryDelegate $dict) {
@@ -945,7 +945,7 @@ class DevblocksEventHelper {
 		
 		// Template
 		
-		$tpl->display('devblocks:cerberusweb.core::events/action_schedule_behavior.tpl');
+		$tpl->display('devblocks:feg.core::events/action_schedule_behavior.tpl');
 	}
 	
 	static function simulateActionScheduleBehavior($params, DevblocksDictionaryDelegate $dict) {
@@ -1123,7 +1123,7 @@ class DevblocksEventHelper {
 		
 		$tpl->assign('macros', $macros);
 		
-		$tpl->display('devblocks:cerberusweb.core::events/action_unschedule_behavior.tpl');
+		$tpl->display('devblocks:feg.core::events/action_unschedule_behavior.tpl');
 	}
 	
 	static function simulateActionUnscheduleBehavior($params, DevblocksDictionaryDelegate $dict) {
@@ -1200,7 +1200,7 @@ class DevblocksEventHelper {
 		$values_to_contexts = $event->getValuesContexts($trigger);
 		$tpl->assign('values_to_contexts', $values_to_contexts);
 		
-		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_create_comment.tpl');
+		$tpl->display('devblocks:feg.core::internal/decisions/actions/_create_comment.tpl');
 	}
 	
 	static function simulateActionCreateComment($params, DevblocksDictionaryDelegate $dict, $on_default) {
@@ -1300,7 +1300,7 @@ class DevblocksEventHelper {
 	
 	static function renderActionScheduleTicketReply() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->display('devblocks:cerberusweb.core::events/model/ticket/action_schedule_email_recipients.tpl');
+		$tpl->display('devblocks:feg.core::events/model/ticket/action_schedule_email_recipients.tpl');
 	}
 	
 	static function runActionScheduleTicketReply($params, DevblocksDictionaryDelegate $dict, $ticket_id, $message_id) {
@@ -1347,13 +1347,13 @@ class DevblocksEventHelper {
 		if(is_array($values_to_contexts))
 		foreach($values_to_contexts as $value_key => $value_data) {
 			if(!isset($value_data['context'])
-				|| !in_array($value_data['context'], array(CerberusContexts::CONTEXT_ADDRESS, CerberusContexts::CONTEXT_TICKET)))
+				|| !in_array($value_data['context'], array(FegContexts::CONTEXT_ADDRESS, FegContexts::CONTEXT_TICKET)))
 					unset($values_to_contexts[$value_key]);
 		}
 		
 		$tpl->assign('values_to_contexts', $values_to_contexts);
 		
-		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_org.tpl');
+		$tpl->display('devblocks:feg.core::internal/decisions/actions/_set_org.tpl');
 	}
 	
 	static function simulateActionSetTicketOrg($params, DevblocksDictionaryDelegate $dict, $default_on) {
@@ -1433,13 +1433,13 @@ class DevblocksEventHelper {
 		if(is_array($on_objects)) {
 			foreach($on_objects as $on_object) {
 				switch($on_object->_context) {
-					case CerberusContexts::CONTEXT_ADDRESS:
+					case FegContexts::CONTEXT_ADDRESS:
 						DAO_Address::update($on_object->id, array(
 							DAO_Address::CONTACT_ORG_ID => $org_id,
 						));
 						break;
 						
-					case CerberusContexts::CONTEXT_TICKET:
+					case FegContexts::CONTEXT_TICKET:
 						DAO_Ticket::update($on_object->id, array(
 							DAO_Ticket::ORG_ID => $org_id,
 						));
@@ -1456,10 +1456,10 @@ class DevblocksEventHelper {
 		$worker_labels = array();
 		$worker_values = array();
 		$labels = array();
-		CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $owner_id, $worker_labels, $worker_values, NULL, true);
+		FegContexts::getContext(FegContexts::CONTEXT_WORKER, $owner_id, $worker_labels, $worker_values, NULL, true);
 				
 			// Clear dupe content
-			CerberusContexts::scrubTokensWithRegexp(
+			FegContexts::scrubTokensWithRegexp(
 				$worker_labels,
 				$worker_values,
 				array(
@@ -1468,7 +1468,7 @@ class DevblocksEventHelper {
 			);
 		
 			// Merge
-			CerberusContexts::merge(
+			FegContexts::merge(
 				$values_prefix,
 				'',
 				$worker_labels,
@@ -1487,7 +1487,7 @@ class DevblocksEventHelper {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('workers', DAO_Worker::getAllActive());
 		
-		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_worker.tpl');
+		$tpl->display('devblocks:feg.core::internal/decisions/actions/_set_worker.tpl');
 	}
 	
 	static function simulateActionSetTicketOwner($params, DevblocksDictionaryDelegate $dict, $default_on) {
@@ -1537,10 +1537,10 @@ class DevblocksEventHelper {
 		$worker_labels = array();
 		$worker_values = array();
 		$labels = array();
-		CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $owner_id, $worker_labels, $worker_values, NULL, true);
+		FegContexts::getContext(FegContexts::CONTEXT_WORKER, $owner_id, $worker_labels, $worker_values, NULL, true);
 				
 			// Clear dupe content
-			CerberusContexts::scrubTokensWithRegexp(
+			FegContexts::scrubTokensWithRegexp(
 				$worker_labels,
 				$worker_values,
 				array(
@@ -1549,7 +1549,7 @@ class DevblocksEventHelper {
 			);
 		
 			// Merge
-			CerberusContexts::merge(
+			FegContexts::merge(
 				$values_prefix,
 				'',
 				$worker_labels,
@@ -1568,7 +1568,7 @@ class DevblocksEventHelper {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('workers', DAO_Worker::getAllActive());
 		
-		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_add_emails.tpl');
+		$tpl->display('devblocks:feg.core::internal/decisions/actions/_add_emails.tpl');
 	}
 
 	static function simulateActionAddRecipients($params, DevblocksDictionaryDelegate $dict, $default_on) {
@@ -1645,7 +1645,7 @@ class DevblocksEventHelper {
 		$event = $trigger->getEvent();
 		$tpl->assign('values_to_contexts', $event->getValuesContexts($trigger));
 		
-		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_add_watchers.tpl');
+		$tpl->display('devblocks:feg.core::internal/decisions/actions/_add_watchers.tpl');
 	}
 
 	static function simulateActionAddWatchers($params, DevblocksDictionaryDelegate $dict, $default_on) {
@@ -1717,7 +1717,7 @@ class DevblocksEventHelper {
 		
 		if(is_array($on_objects)) {
 			foreach($on_objects as $on_object) {
-				CerberusContexts::addWatchers($on_object->_context, $on_object->id, $worker_ids);
+				FegContexts::addWatchers($on_object->_context, $on_object->id, $worker_ids);
 			}
 		}
 	}
@@ -1736,7 +1736,7 @@ class DevblocksEventHelper {
 		
 		$tpl->assign('values_to_contexts', $values_to_contexts);
 		
-		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_create_notification.tpl');
+		$tpl->display('devblocks:feg.core::internal/decisions/actions/_create_notification.tpl');
 	}
 	
 	static function simulateActionCreateNotification($params, DevblocksDictionaryDelegate $dict, $default_on) {
@@ -1883,7 +1883,7 @@ class DevblocksEventHelper {
 		$values_to_contexts = $event->getValuesContexts($trigger);
 		$tpl->assign('values_to_contexts', $values_to_contexts);
 		
-		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TASK);
+		$custom_fields = DAO_CustomField::getByContext(FegContexts::CONTEXT_TASK);
 		$tpl->assign('custom_fields', $custom_fields);
 
 		if(false != ($params = $tpl->getVariable('params'))) {
@@ -1892,7 +1892,7 @@ class DevblocksEventHelper {
 			$tpl->assign('custom_field_values', $custom_field_values);
 		}
 		
-		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_create_task.tpl');
+		$tpl->display('devblocks:feg.core::internal/decisions/actions/_create_task.tpl');
 	}
 	
 	static function simulateActionCreateTask($params, DevblocksDictionaryDelegate $dict, $default_on) {
@@ -2042,12 +2042,12 @@ class DevblocksEventHelper {
 						if(is_string($val))
 							$val = $tpl_builder->build($val, $dict);
 					
-						DAO_CustomFieldValue::formatAndSetFieldValues(CerberusContexts::CONTEXT_TASK, $task_id, array($cf_id => $val));
+						DAO_CustomFieldValue::formatAndSetFieldValues(FegContexts::CONTEXT_TASK, $task_id, array($cf_id => $val));
 					}
 					
 					// Watchers
 					if(is_array($watcher_worker_ids) && !empty($watcher_worker_ids)) {
-						CerberusContexts::addWatchers(CerberusContexts::CONTEXT_TASK, $task_id, $watcher_worker_ids);
+						FegContexts::addWatchers(FegContexts::CONTEXT_TASK, $task_id, $watcher_worker_ids);
 					}
 					
 					// Comment content
@@ -2056,7 +2056,7 @@ class DevblocksEventHelper {
 							DAO_Comment::OWNER_CONTEXT => $trigger->owner_context,
 							DAO_Comment::OWNER_CONTEXT_ID => $trigger->owner_context_id,
 							DAO_Comment::COMMENT => $comment,
-							DAO_Comment::CONTEXT => CerberusContexts::CONTEXT_TASK,
+							DAO_Comment::CONTEXT => FegContexts::CONTEXT_TASK,
 							DAO_Comment::CONTEXT_ID => $task_id,
 							DAO_Comment::CREATED => time(),
 						);
@@ -2064,7 +2064,7 @@ class DevblocksEventHelper {
 					}
 					
 					// Connection
-					DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TASK, $task_id, $on_object->_context, $on_object->id);
+					DAO_ContextLink::setLink(FegContexts::CONTEXT_TASK, $task_id, $on_object->_context, $on_object->id);
 				}
 			}
 		}
@@ -2085,7 +2085,7 @@ class DevblocksEventHelper {
 		$values_to_contexts = $event->getValuesContexts($trigger);
 		$tpl->assign('values_to_contexts', $values_to_contexts);
 		
-		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TICKET);
+		$custom_fields = DAO_CustomField::getByContext(FegContexts::CONTEXT_TICKET);
 		$tpl->assign('custom_fields', $custom_fields);
 
 		if(false != ($params = $tpl->getVariable('params'))) {
@@ -2094,7 +2094,7 @@ class DevblocksEventHelper {
 			$tpl->assign('custom_field_values', $custom_field_values);
 		}
 		
-		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_create_ticket.tpl');
+		$tpl->display('devblocks:feg.core::internal/decisions/actions/_create_ticket.tpl');
 	}
 	
 	static function simulateActionCreateTicket($params, DevblocksDictionaryDelegate $dict) {
@@ -2203,11 +2203,11 @@ class DevblocksEventHelper {
 		$subject = $tpl_builder->build($params['subject'], $dict);
 		$content = $tpl_builder->build($params['content'], $dict);
 				
-		$message = new CerberusParserMessage();
+		$message = new FegParserMessage();
 		$message->headers['date'] = date('r');
 		$message->headers['to'] = $group_replyto->email;
 		$message->headers['subject'] = $subject;
-		$message->headers['message-id'] = CerberusApplication::generateMessageId();
+		$message->headers['message-id'] = FegApplication::generateMessageId();
 		
 		// Sender
 		$fromList = imap_rfc822_parse_adrlist(rtrim($requesters,', '),'');
@@ -2226,7 +2226,7 @@ class DevblocksEventHelper {
 		// [TODO] Custom fields
 		
 		// Parse
-		$ticket_id = CerberusParser::parseMessage($message);
+		$ticket_id = FegParser::parseMessage($message);
 		$ticket = DAO_Ticket::get($ticket_id);
 		
 		// Add additional requesters to ticket
@@ -2249,10 +2249,10 @@ class DevblocksEventHelper {
 		
 		// Watchers
 		if(is_array($watcher_worker_ids) && !empty($watcher_worker_ids)) {
-			CerberusContexts::addWatchers(CerberusContexts::CONTEXT_TICKET, $ticket_id, $watcher_worker_ids);
+			FegContexts::addWatchers(FegContexts::CONTEXT_TICKET, $ticket_id, $watcher_worker_ids);
 		}
 		
-		CerberusMail::sendTicketMessage($properties);
+		FegMail::sendTicketMessage($properties);
 		
 		// Custom fields
 		$custom_field_values = DevblocksEventHelper::getCustomFieldValuesFromParams($params);
@@ -2262,7 +2262,7 @@ class DevblocksEventHelper {
 			if(is_string($val))
 				$val = $tpl_builder->build($val, $dict);
 		
-			DAO_CustomFieldValue::formatAndSetFieldValues(CerberusContexts::CONTEXT_TICKET, $ticket_id, array($cf_id => $val));
+			DAO_CustomFieldValue::formatAndSetFieldValues(FegContexts::CONTEXT_TICKET, $ticket_id, array($cf_id => $val));
 		}
 		
 		// Connection
@@ -2278,7 +2278,7 @@ class DevblocksEventHelper {
 			
 			if(is_array($on_objects)) {
 				foreach($on_objects as $on_object) {
-					DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TICKET, $ticket_id, $on_object->_context, $on_object->id);
+					DAO_ContextLink::setLink(FegContexts::CONTEXT_TICKET, $ticket_id, $on_object->_context, $on_object->id);
 				}
 			}
 		}
@@ -2305,7 +2305,7 @@ class DevblocksEventHelper {
 		
 		$tpl->assign('placeholders', $placeholders);
 		
-		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_send_email.tpl');
+		$tpl->display('devblocks:feg.core::internal/decisions/actions/_send_email.tpl');
 	}
 	
 	static function simulateActionSendEmail($params, DevblocksDictionaryDelegate $dict) {
@@ -2506,7 +2506,7 @@ class DevblocksEventHelper {
 		
 		// Send
 		
-		CerberusMail::quickSend(
+		FegMail::quickSend(
 			implode(', ', $to),
 			$subject,
 			$content,
@@ -2574,7 +2574,7 @@ class DevblocksEventHelper {
 		
 		$tpl->assign('default_content', vsprintf($translate->_('va.actions.ticket.relay.default_content'), $content_token));
 		
-		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_relay_email.tpl');
+		$tpl->display('devblocks:feg.core::internal/decisions/actions/_relay_email.tpl');
 	}
 	
 	// [TODO] Move this to an event parent so we can presume values
@@ -2583,7 +2583,7 @@ class DevblocksEventHelper {
 		$logger = DevblocksPlatform::getConsoleLog('Attendant');
 		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
 		$mail_service = DevblocksPlatform::getMailService();
-		$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
+		$mailer = $mail_service->getMailer(FegMail::getMailerDefaults());
 		
 		if(empty($group_id) || null == ($group = DAO_Group::get($group_id))) {
 			$logger->error("Can't load the ticket's group. Aborting action.");
@@ -2597,7 +2597,7 @@ class DevblocksEventHelper {
 		$attachment_data = array();
 		if(!empty($message_id)) {
 			if(isset($params['include_attachments']) && !empty($params['include_attachments'])) {
-				$attachment_data = DAO_AttachmentLink::getLinksAndAttachments(CerberusContexts::CONTEXT_MESSAGE, $message_id);
+				$attachment_data = DAO_AttachmentLink::getLinksAndAttachments(FegContexts::CONTEXT_MESSAGE, $message_id);
 			}
 		}
 		
@@ -2610,7 +2610,7 @@ class DevblocksEventHelper {
 		
 		// Watchers
 		if(isset($params['to_watchers']) && !empty($params['to_watchers'])) {
-			$watchers = CerberusContexts::getWatchers($context, $context_id);
+			$watchers = FegContexts::getWatchers($context, $context_id);
 			foreach($watchers as $watcher) { /* @var $watcher Model_Worker */
 				if(!in_array($watcher, $relay_list))
 				$relay_list[] = $watcher;
@@ -2669,7 +2669,7 @@ class DevblocksEventHelper {
 				
 				$headers->removeAll('message-id');
 				$headers->addTextHeader('Message-Id', sprintf("<%s_%d_%d_%s@cerb>", $context, $context_id, time(), $sign));
-				$headers->addTextHeader('X-CerberusRedirect','1');
+				$headers->addTextHeader('X-FegRedirect','1');
 	
 				$content = $tpl_builder->build($params['content'], $dict);
 				
@@ -2744,7 +2744,7 @@ class DevblocksEventHelper {
 					
 					if($load_objects) {
 						$ctx_values = array();
-						CerberusContexts::getContext($ctx_ext, $ctx_id, $null, $ctx_values);
+						FegContexts::getContext($ctx_ext, $ctx_id, $null, $ctx_values);
 						$ctx_object = new DevblocksDictionaryDelegate($ctx_values);
 						
 						if(!isset($result['objects']))
@@ -2898,7 +2898,7 @@ class DevblocksEventHelper {
 			if(!empty($object)) {
 				$obj_labels = array();
 				$obj_values = array();
-				CerberusContexts::getContext($context, $object, $obj_labels, $obj_values, null, true);
+				FegContexts::getContext($context, $object, $obj_labels, $obj_values, null, true);
 				$array =& $dict->$token;
 				$array[$new_id] = new DevblocksDictionaryDelegate($obj_values);
 			}
