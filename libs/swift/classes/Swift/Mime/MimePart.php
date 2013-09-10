@@ -8,6 +8,10 @@
  * file that was distributed with this source code.
  */
 
+//@require 'Swift/Mime/SimpleMimeEntity.php';
+//@require 'Swift/Mime/ContentEncoder.php';
+//@require 'Swift/Mime/HeaderSet.php';
+//@require 'Swift/KeyCache.php';
 
 /**
  * A MIME part, in a multipart message.
@@ -37,13 +41,12 @@ class Swift_Mime_MimePart extends Swift_Mime_SimpleMimeEntity
    * @param Swift_Mime_HeaderSet $headers
    * @param Swift_Mime_ContentEncoder $encoder
    * @param Swift_KeyCache $cache
-   * @param Swift_Mime_Grammar $grammar
    * @param string $charset
    */
   public function __construct(Swift_Mime_HeaderSet $headers,
-    Swift_Mime_ContentEncoder $encoder, Swift_KeyCache $cache, Swift_Mime_Grammar $grammar, $charset = null)
+    Swift_Mime_ContentEncoder $encoder, Swift_KeyCache $cache, $charset = null)
   {
-    parent::__construct($headers, $encoder, $cache, $grammar);
+    parent::__construct($headers, $encoder, $cache);
     $this->setContentType('text/plain');
     if (!is_null($charset))
     {
@@ -58,7 +61,6 @@ class Swift_Mime_MimePart extends Swift_Mime_SimpleMimeEntity
    * @param mixed $body
    * @param string $contentType optional
    * @param string $charset optional
-   * @param Swift_Mime_MimePart
    */
   public function setBody($body, $contentType = null, $charset = null)
   {
@@ -84,7 +86,6 @@ class Swift_Mime_MimePart extends Swift_Mime_SimpleMimeEntity
    * Set the character set of this entity.
    * 
    * @param string $charset
-   * @param Swift_Mime_MimePart
    */
   public function setCharset($charset)
   {
@@ -112,7 +113,6 @@ class Swift_Mime_MimePart extends Swift_Mime_SimpleMimeEntity
    * Set the format of this entity (flowed or fixed).
    * 
    * @param string $format
-   * @param Swift_Mime_MimePart
    */
   public function setFormat($format)
   {
@@ -137,7 +137,6 @@ class Swift_Mime_MimePart extends Swift_Mime_SimpleMimeEntity
    * Turn delsp on or off for this entity.
    * 
    * @param boolean $delsp
-   * @param Swift_Mime_MimePart
    */
   public function setDelSp($delsp = true)
   {

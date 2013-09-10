@@ -41,14 +41,14 @@ if(isset($columns['class'])) {
 // devblocks_setting
 
 if(!isset($tables['devblocks_setting'])) {
-	$sql = sprintf("
+	$sql = "
 		CREATE TABLE IF NOT EXISTS devblocks_setting (
 	    	plugin_id VARCHAR(255) DEFAULT '' NOT NULL,
 			setting VARCHAR(32) DEFAULT '' NOT NULL,
 			value VARCHAR(255) DEFAULT '' NOT NULL,
 			PRIMARY KEY (plugin_id, setting)
-		) ENGINE=%s;
-	", APP_DB_ENGINE);
+		) ENGINE=MyISAM;
+	";
 	$db->Execute($sql);	
 }
 
@@ -56,28 +56,18 @@ if(!isset($tables['devblocks_setting'])) {
 // devblocks_template
 
 if(!isset($tables['devblocks_template'])) {
-	$sql = sprintf("
+	$sql = "
 		CREATE TABLE IF NOT EXISTS devblocks_template (
-	    	id INT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,
+	    	id INT UNSIGNED DEFAULT 0 NOT NULL,
 	    	plugin_id VARCHAR(255) DEFAULT '' NOT NULL,
 			path VARCHAR(255) DEFAULT '' NOT NULL,
 			tag VARCHAR(255) DEFAULT '' NOT NULL,
 			last_updated INT UNSIGNED DEFAULT 0 NOT NULL,
 			content MEDIUMTEXT,
 			PRIMARY KEY (id)
-		) ENGINE=%s;
-	", APP_DB_ENGINE);
+		) ENGINE=MyISAM;
+	";
 	$db->Execute($sql);	
-}
-
-// Update key
-list($columns, $indexes) = $db->metaTable('devblocks_template');
-
-if(isset($columns['id']) 
-	&& ('int(10) unsigned' != $columns['id']['type'] 
-	|| 'auto_increment' != $columns['id']['extra'])
-) {
-	$db->Execute("ALTER TABLE devblocks_template MODIFY COLUMN id INT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE");
 }
 
 // ===========================================================================
@@ -114,7 +104,7 @@ if(isset($tables[$prefix.'session'])) {
 // Add Devblocks-backed sessions
 
 if(!isset($tables['devblocks_session'])) {
-	$sql = sprintf("
+	$sql = "
 		CREATE TABLE IF NOT EXISTS devblocks_session (
 			session_key VARCHAR(64) DEFAULT '' NOT NULL,
 			created INT UNSIGNED DEFAULT 0 NOT NULL,
@@ -123,8 +113,8 @@ if(!isset($tables['devblocks_session'])) {
 			PRIMARY KEY (session_key),
 			INDEX created (created),
 			INDEX updated (updated)
-		) ENGINE=%s;
-	", APP_DB_ENGINE);
+		) ENGINE=MyISAM;
+	";
 	$db->Execute($sql);
 }
 
@@ -149,16 +139,16 @@ if(isset($columns['params'])
 // Storage profiles
 
 if(!isset($tables['devblocks_storage_profile'])) {
-	$sql = sprintf("
+	$sql = "
 		CREATE TABLE IF NOT EXISTS devblocks_storage_profile (
-			id INT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,
+			id int(11) NOT NULL DEFAULT 0,
 			name varchar(128) NOT NULL DEFAULT '',
 			extension_id varchar(255) NOT NULL DEFAULT '',
 			params_json longtext,
 			PRIMARY KEY (id),
 			INDEX extension_id (extension_id)
-		) ENGINE=%s;
-	", APP_DB_ENGINE);
+		) ENGINE=MyISAM;
+	";
 	$db->Execute($sql) or die($db->ErrorMsg());
 }
 

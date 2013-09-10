@@ -1,14 +1,11 @@
 <?php
 
-require dirname(__FILE__) . '/../mime_types.php';
+require_once dirname(__FILE__) . '/../mime_types.php';
 
 Swift_DependencyContainer::getInstance()
     
   -> register('properties.charset')
   -> asValue('utf-8')
-  
-  -> register('mime.grammar')
-  -> asSharedInstanceOf('Swift_Mime_Grammar')
   
   -> register('mime.message')
   -> asNewInstanceOf('Swift_Mime_SimpleMessage')
@@ -16,7 +13,6 @@ Swift_DependencyContainer::getInstance()
     'mime.headerset',
     'mime.qpcontentencoder',
     'cache',
-    'mime.grammar',
     'properties.charset'
   ))
   
@@ -26,7 +22,6 @@ Swift_DependencyContainer::getInstance()
     'mime.headerset',
     'mime.qpcontentencoder',
     'cache',
-    'mime.grammar',
     'properties.charset'
   ))
   
@@ -35,8 +30,7 @@ Swift_DependencyContainer::getInstance()
   -> withDependencies(array(
     'mime.headerset',
     'mime.base64contentencoder',
-    'cache',
-    'mime.grammar'
+    'cache'
   ))
   -> addConstructorValue($swift_mime_types)
   
@@ -45,8 +39,7 @@ Swift_DependencyContainer::getInstance()
   -> withDependencies(array(
     'mime.headerset',
     'mime.base64contentencoder',
-    'cache',
-    'mime.grammar'
+    'cache'
   ))
   -> addConstructorValue($swift_mime_types)
   
@@ -55,7 +48,6 @@ Swift_DependencyContainer::getInstance()
   -> withDependencies(array(
       'mime.qpheaderencoder',
       'mime.rfc2231encoder',
-      'mime.grammar',
       'properties.charset'
     ))
   

@@ -8,6 +8,10 @@
  * file that was distributed with this source code.
  */
 
+//@require 'Swift/ByteStream/AbstractFilterableInputStream.php';
+//@require 'Swift/InputByteStream.php';
+//@require 'Swift/FileStream.php';
+//@require 'Swift/IoException.php';
 
 /**
  * Allows reading and writing of bytes to and from a file.
@@ -37,9 +41,6 @@ class Swift_ByteStream_FileByteStream
   
   /** If magic_quotes_runtime is on, this will be true */
   private $_quotes = false;
-
-  /** If stream is seekable true/false, or null if not known */
-  private $_seekable = null;
   
   /**
    * Create a new FileByteStream for $path.
@@ -50,11 +51,7 @@ class Swift_ByteStream_FileByteStream
   {
     $this->_path = $path;
     $this->_mode = $writable ? 'w+b' : 'rb';
-    
-    if (function_exists('get_magic_quotes_runtime') && @get_magic_quotes_runtime() == 1)
-    {
-      $this->_quotes = true;
-    }
+    $this->_quotes = get_magic_quotes_runtime();
   }
   
   /**
@@ -82,19 +79,18 @@ class Swift_ByteStream_FileByteStream
     {
       if ($this->_quotes)
       {
-        ini_set('magic_quotes_runtime', 0);
+        set_magic_quotes_runtime(0);
       }
       $bytes = fread($fp, $length);
       if ($this->_quotes)
       {
-        ini_set('magic_quotes_runtime', 1);
+        set_magic_quotes_runtime(1);
       }
       $this->_offset = ftell($fp);
       return $bytes;
     }
     else
     {
-      $this->_resetReadHandle();
       return false;
     }
   }
@@ -108,7 +104,7 @@ class Swift_ByteStream_FileByteStream
   {
     if (isset($this->_reader))
     {
-      $this->_seekReadStreamToPosition($byteOffset);
+      fseek($this->_reader, $byteOffset, SEEK_SET);
     }
     $this->_offset = $byteOffset;
   }
@@ -136,13 +132,9 @@ class Swift_ByteStream_FileByteStream
       {
         throw new Swift_IoException(
           'Unable to open file for reading [' . $this->_path . ']'
-        );
+          );
       }
-      if ($this->_offset <> 0)
-      {
-        $this->_getReadStreamSeekableStatus();
-        $this->_seekReadStreamToPosition($this->_offset);
-      }
+      fseek($this->_reader, $this->_offset, SEEK_SET);
     }
     return $this->_reader;
   }
@@ -156,10 +148,20 @@ class Swift_ByteStream_FileByteStream
       {
         throw new Swift_IoException(
           'Unable to open file for writing [' . $this->_path . ']'
-        );
+          );
       }
     }
     return $this->_writer;
+  }
+  
+  /** Force a reload of the resource for writing */
+  private function _resetWriteHandle()
+  {
+    if (isset($this->_writer))
+    {
+      fclose($this->_writer);
+      $this->_writer = null;
+    }
   }
   
   /** Force a reload of the resource for reading */
@@ -172,63 +174,4 @@ class Swift_ByteStream_FileByteStream
     }
   }
   
-  /** Check if ReadOnly Stream is seekable */
-  private function _getReadStreamSeekableStatus()
-  {
-    $metas = stream_get_meta_data($this->_reader);
-    $this->_seekable = $metas['seekable'];
-  }
-  
-  /** Streams in a readOnly stream ensuring copy if needed */
-  private function _seekReadStreamToPosition($offset)
-  {
-    if ($this->_seekable===null)
-    {
-      $this->_getReadStreamSeekableStatus();
-    }
-    if ($this->_seekable === false)
-    {
-      $currentPos = ftell($this->_reader);
-      if ($currentPos<$offset)
-      {
-        $toDiscard = $offset-$currentPos;
-        fread($this->_reader, $toDiscard);
-        return;
-      }
-      $this->_copyReadStream();
-    }
-    fseek($this->_reader, $offset, SEEK_SET);
-  }
-  
-  /** Copy a readOnly Stream to ensure seekability */
-  private function _copyReadStream()
-  {
-    if ($tmpFile = fopen('php://temp/maxmemory:4096', 'w+b'))
-    {
-      /* We have opened a php:// Stream Should work without problem */
-    } 
-    elseif (function_exists('sys_get_temp_dir') && is_writable(sys_get_temp_dir()) && ($tmpFile = tmpfile())) 
-    {
-      /* We have opened a tmpfile */
-    } 
-    else
-    {
-      throw new Swift_IoException('Unable to copy the file to make it seekable, sys_temp_dir is not writable, php://memory not available');
-    }
-    $currentPos = ftell($this->_reader);
-    fclose($this->_reader);
-    $source = fopen($this->_path, 'rb');
-    if (!$source)
-    {
-      throw new Swift_IoException('Unable to open file for copying [' . $this->_path . ']');
-    }
-    fseek($tmpFile, 0, SEEK_SET);
-    while (!feof($source)) 
-    {
-      fwrite($tmpFile, fread($source, 4096));
-    }
-    fseek($tmpFile, $currentPos, SEEK_SET);
-    fclose($source);
-    $this->_reader = $tmpFile;
-  }
 }

@@ -9,45 +9,66 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-class Twig_Node_Expression_GetAttr extends Twig_Node_Expression
+class Twig_Node_Expression_GetAttr extends Twig_Node_Expression implements Twig_NodeListInterface
 {
-    public function __construct(Twig_Node_Expression $node, Twig_Node_Expression $attribute, Twig_Node_Expression_Array $arguments, $type, $lineno)
+  protected $node;
+  protected $attr;
+  protected $arguments;
+
+  public function __construct(Twig_Node $node, $attr, $arguments, $lineno, $token_value)
+  {
+    parent::__construct($lineno);
+    $this->node = $node;
+    $this->attr = $attr;
+    $this->arguments = $arguments;
+    $this->token_value = $token_value;
+  }
+
+  public function __toString()
+  {
+    return get_class($this).'('.$this->node.', '.$this->attr.')';
+  }
+
+  public function getNode()
+  {
+    return $this->node;
+  }
+
+  public function getNodes()
+  {
+    return array($this->node);
+  }
+
+  public function setNodes(array $nodes)
+  {
+    $this->node = $nodes[0];
+  }
+
+  public function compile($compiler)
+  {
+    $compiler
+      ->raw('$this->getAttribute(')
+      ->subcompile($this->node)
+      ->raw(', ')
+      ->subcompile($this->attr)
+      ->raw(', array(')
+    ;
+
+    foreach ($this->arguments as $node)
     {
-        parent::__construct(array('node' => $node, 'attribute' => $attribute, 'arguments' => $arguments), array('type' => $type, 'is_defined_test' => false, 'ignore_strict_check' => false), $lineno);
+      $compiler
+        ->subcompile($node)
+        ->raw(', ')
+      ;
     }
 
-    public function compile(Twig_Compiler $compiler)
+    $compiler->raw(')');
+
+    if ('[' == $this->token_value) // Don't look for functions if they're using foo[bar]
     {
-        if (function_exists('twig_template_get_attributes')) {
-            $compiler->raw('twig_template_get_attributes($this, ');
-        } else {
-            $compiler->raw('$this->getAttribute(');
-        }
-
-        if ($this->getAttribute('ignore_strict_check')) {
-            $this->getNode('node')->setAttribute('ignore_strict_check', true);
-        }
-
-        $compiler->subcompile($this->getNode('node'));
-
-        $compiler->raw(', ')->subcompile($this->getNode('attribute'));
-
-        if (count($this->getNode('arguments')) || Twig_TemplateInterface::ANY_CALL !== $this->getAttribute('type') || $this->getAttribute('is_defined_test') || $this->getAttribute('ignore_strict_check')) {
-            $compiler->raw(', ')->subcompile($this->getNode('arguments'));
-
-            if (Twig_TemplateInterface::ANY_CALL !== $this->getAttribute('type') || $this->getAttribute('is_defined_test') || $this->getAttribute('ignore_strict_check')) {
-                $compiler->raw(', ')->repr($this->getAttribute('type'));
-            }
-
-            if ($this->getAttribute('is_defined_test') || $this->getAttribute('ignore_strict_check')) {
-                $compiler->raw(', '.($this->getAttribute('is_defined_test') ? 'true' : 'false'));
-            }
-
-            if ($this->getAttribute('ignore_strict_check')) {
-                $compiler->raw(', '.($this->getAttribute('ignore_strict_check') ? 'true' : 'false'));
-            }
-        }
-
-        $compiler->raw(')');
+      $compiler->raw(', true');
     }
+
+    $compiler->raw(')');
+  }
 }

@@ -14,87 +14,114 @@
  * Represents an include node.
  *
  * @package    twig
- * @author     Fabien Potencier <fabien@symfony.com>
+ * @author     Fabien Potencier <fabien.potencier@symfony-project.com>
+ * @version    SVN: $Id$
  */
-class Twig_Node_Include extends Twig_Node implements Twig_NodeOutputInterface
+class Twig_Node_Include extends Twig_Node implements Twig_NodeListInterface
 {
-    public function __construct(Twig_Node_Expression $expr, Twig_Node_Expression $variables = null, $only = false, $ignoreMissing = false, $lineno, $tag = null)
+  protected $expr;
+  protected $sandboxed;
+  protected $variables;
+
+  public function __construct(Twig_Node_Expression $expr, $sandboxed, $variables, $lineno, $tag = null)
+  {
+    parent::__construct($lineno, $tag);
+
+    $this->expr = $expr;
+    $this->sandboxed = $sandboxed;
+    $this->variables = $variables;
+  }
+
+  public function __toString()
+  {
+    return get_class($this).'('.$this->expr.')';
+  }
+
+  public function getNodes()
+  {
+    if (null === $this->variables)
     {
-        parent::__construct(array('expr' => $expr, 'variables' => $variables), array('only' => (Boolean) $only, 'ignore_missing' => (Boolean) $ignoreMissing), $lineno, $tag);
+      return array(new Twig_Node_Text('', -1));
+    }
+    else
+    {
+      return array($this->variables);
     }
 
-    /**
-     * Compiles the node to PHP.
-     *
-     * @param Twig_Compiler A Twig_Compiler instance
-     */
-    public function compile(Twig_Compiler $compiler)
+    return $this->variables->getNodes();
+  }
+
+  public function setNodes(array $nodes)
+  {
+    if (isset($nodes[0]) && -1 === $nodes[0]->getLine())
     {
-        $compiler->addDebugInfo($this);
+      $this->variables = null;
+    }
+    else
+    {
+      $this->variables = $nodes[0];
+    }
+  }
 
-        if ($this->getAttribute('ignore_missing')) {
-            $compiler
-                ->write("try {\n")
-                ->indent()
-            ;
-        }
+  public function getIncludedFile()
+  {
+    return $this->expr;
+  }
 
-        $this->addGetTemplate($compiler);
+  public function isSandboxed()
+  {
+    return $this->sandboxed;
+  }
 
-        $compiler->raw('->display(');
+  public function getVariables()
+  {
+    return $this->variables;
+  }
 
-        $this->addTemplateArguments($compiler);
-
-        $compiler->raw(");\n");
-
-        if ($this->getAttribute('ignore_missing')) {
-            $compiler
-                ->outdent()
-                ->write("} catch (Twig_Error_Loader \$e) {\n")
-                ->indent()
-                ->write("// ignore missing template\n")
-                ->outdent()
-                ->write("}\n\n")
-            ;
-        }
+  public function compile($compiler)
+  {
+    if (!$compiler->getEnvironment()->hasExtension('sandbox') && $this->sandboxed)
+    {
+      throw new Twig_SyntaxError('Unable to use the sanboxed attribute on an include if the sandbox extension is not enabled.', $this->lineno);
     }
 
-    protected function addGetTemplate(Twig_Compiler $compiler)
+    $compiler->addDebugInfo($this);
+
+    if ($this->sandboxed)
     {
-        if ($this->getNode('expr') instanceof Twig_Node_Expression_Constant) {
-            $compiler
-                ->write("\$this->env->loadTemplate(")
-                ->subcompile($this->getNode('expr'))
-                ->raw(")")
-            ;
-        } else {
-            $compiler
-                ->write("\$template = \$this->env->resolveTemplate(")
-                ->subcompile($this->getNode('expr'))
-                ->raw(");\n")
-                ->write('$template')
-            ;
-        }
+      $compiler
+        ->write("\$sandbox = \$this->env->getExtension('sandbox');\n")
+        ->write("\$alreadySandboxed = \$sandbox->isSandboxed();\n")
+        ->write("\$sandbox->enableSandbox();\n")
+      ;
     }
 
-    protected function addTemplateArguments(Twig_Compiler $compiler)
+    $compiler
+      ->write('$this->env->loadTemplate(')
+      ->subcompile($this->expr)
+      ->raw(')->display(')
+    ;
+
+    if (null === $this->variables)
     {
-        if (false === $this->getAttribute('only')) {
-            if (null === $this->getNode('variables')) {
-                $compiler->raw('$context');
-            } else {
-                $compiler
-                    ->raw('array_merge($context, ')
-                    ->subcompile($this->getNode('variables'))
-                    ->raw(')')
-                ;
-            }
-        } else {
-            if (null === $this->getNode('variables')) {
-                $compiler->raw('array()');
-            } else {
-                $compiler->subcompile($this->getNode('variables'));
-            }
-        }
+      $compiler->raw('$context');
     }
+    else
+    {
+      $compiler->subcompile($this->variables);
+    }
+
+    $compiler->raw(");\n");
+
+    if ($this->sandboxed)
+    {
+      $compiler
+        ->write("if (!\$alreadySandboxed)\n", "{\n")
+        ->indent()
+        ->write("\$sandbox->disableSandbox();\n")
+        ->outdent()
+        ->write("}\n")
+      ;
+    }
+  }
 }

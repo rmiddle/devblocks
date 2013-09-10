@@ -1,10 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<plugin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.devblocks.com/schema/plugin.xsd">
+<!DOCTYPE plugin SYSTEM "plugin.dtd">
+<plugin>
 	<id>devblocks.core</id>
 	<name>[Devblocks] Core</name>
 	<description>Devblocks: PHP5 Application Framework</description>
-	<author>Webgroup Media, LLC.</author>
-	<version>2.1.3</version>
+	<author>WebGroup Media, LLC.</author>
+	<revision>0</revision>
 	<link>http://wiki.devblocks.com/</link>
 	
 	<!-- Patches -->
@@ -14,32 +14,7 @@
 		<patch version="1.0.0-beta" revision="253" file="patches/1.0.0_beta.php" />
 		<patch version="1.1.0" revision="290" file="patches/1.1.0.php" />
 		<patch version="2.0.0" revision="305" file="patches/2.0.0.php" />
-		<patch version="2.1.0" revision="306" file="patches/2.1.0.php" />
-		<patch version="2.1.1" revision="308" file="patches/2.1.1.php" />
-		<patch version="2.1.2" revision="309" file="patches/2.1.2.php" />
 	</patches>
-	
-	<!-- Exported Classes -->
-
-	<class_loader>
-		<file path="api/dao/devblocks_storage_profile.php">
-			<class name="View_DevblocksStorageProfile" />
-		</file>
-		<file path="api/dao/devblocks_template.php">
-			<class name="View_DevblocksTemplate" />
-		</file>
-		<file path="libs/user_agent_parser.php">
-			<class name="UserAgentParser" />
-		</file>
-		<file path="libs/swift/swift_required.php">
-			<class name="Swift" />
-			<class name="Swift_Attachment" />
-			<class name="Swift_Mailer" />
-			<class name="Swift_Message" />
-			<class name="Swift_Plugins_AntiFloodPlugin" />
-			<class name="Swift_SmtpTransport" />
-		</file>
-	</class_loader>
 	
 	<!-- Extensions -->
 	
@@ -51,7 +26,7 @@
 			<id>devblocks.storage.engine.disk</id>
 			<name>Disk</name>
 			<class>
-				<file>api/services/storage.php</file>
+				<file>api/Plugin.php</file>
 				<name>DevblocksStorageEngineDisk</name>
 			</class>
 			<params>
@@ -62,7 +37,7 @@
 			<id>devblocks.storage.engine.database</id>
 			<name>Database</name>
 			<class>
-				<file>api/services/storage.php</file>
+				<file>api/Plugin.php</file>
 				<name>DevblocksStorageEngineDatabase</name>
 			</class>
 			<params>
@@ -73,7 +48,7 @@
 			<id>devblocks.storage.engine.s3</id>
 			<name>Amazon S3</name>
 			<class>
-				<file>api/services/storage.php</file>
+				<file>api/Plugin.php</file>
 				<name>DevblocksStorageEngineS3</name>
 			</class>
 			<params>

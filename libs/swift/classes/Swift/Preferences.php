@@ -8,6 +8,7 @@
  * file that was distributed with this source code.
  */
 
+//@require 'Swift/DependencyContainer.php';
 
 /**
  * Changes some global preference settings in Swift Mailer.
@@ -69,22 +70,6 @@ class Swift_Preferences
   {
     Swift_DependencyContainer::getInstance()
       ->register('cache')->asAliasOf(sprintf('cache.%s', $type));
-    return $this;
-  }
-  
-  /**
-   * Add the
-   * @param boolean $dotEscape
-   * @return Swift_Preferences
-   */
-  public function setQPDotEscape($dotEscape)
-  {
-    $dotEscape=!empty($dotEscape);
-    Swift_DependencyContainer::getInstance()
-      -> register('mime.qpcontentencoder')
-      -> asNewInstanceOf('Swift_Mime_ContentEncoder_QpContentEncoder')
-      -> withDependencies(array('mime.charstream', 'mime.bytecanonicalizer'))
-      -> addConstructorValue($dotEscape);
     return $this;
   }
   

@@ -14,25 +14,34 @@
  * Represents a block call node.
  *
  * @package    twig
- * @author     Fabien Potencier <fabien@symfony.com>
+ * @author     Fabien Potencier <fabien.potencier@symfony-project.com>
+ * @version    SVN: $Id$
  */
-class Twig_Node_BlockReference extends Twig_Node implements Twig_NodeOutputInterface
+class Twig_Node_BlockReference extends Twig_Node
 {
-    public function __construct($name, $lineno, $tag = null)
-    {
-        parent::__construct(array(), array('name' => $name), $lineno, $tag);
-    }
+  protected $name;
 
-    /**
-     * Compiles the node to PHP.
-     *
-     * @param Twig_Compiler A Twig_Compiler instance
-     */
-    public function compile(Twig_Compiler $compiler)
-    {
-        $compiler
-            ->addDebugInfo($this)
-            ->write(sprintf("\$this->displayBlock('%s', \$context, \$blocks);\n", $this->getAttribute('name')))
-        ;
-    }
+  public function __construct($name, $lineno, $tag = null)
+  {
+    parent::__construct($lineno, $tag);
+    $this->name = $name;
+  }
+
+  public function __toString()
+  {
+    return get_class($this).'('.$this->name.')';
+  }
+
+  public function compile($compiler)
+  {
+    $compiler
+      ->addDebugInfo($this)
+      ->write(sprintf('$this->block_%s($context);'."\n", $this->name))
+    ;
+  }
+
+  public function getName()
+  {
+    return $this->name;
+  }
 }

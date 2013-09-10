@@ -1,102 +1,109 @@
 <?php
 
-/*
- * This file is part of Twig.
- *
- * (c) 2010 Fabien Potencier
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
-
-/**
- * Represents a set node.
- *
- * @package    twig
- * @author     Fabien Potencier <fabien@symfony.com>
- */
-class Twig_Node_Set extends Twig_Node
+class Twig_Node_Set extends Twig_Node implements Twig_NodeListInterface
 {
-    public function __construct($capture, Twig_NodeInterface $names, Twig_NodeInterface $values, $lineno, $tag = null)
+  protected $names;
+  protected $values;
+  protected $isMultitarget;
+
+  public function __construct($isMultitarget, $names, $values, $lineno, $tag = null)
+  {
+    parent::__construct($lineno, $tag);
+
+    $this->isMultitarget = $isMultitarget;
+    $this->names = $names;
+    $this->values = $values;
+  }
+
+  public function __toString()
+  {
+    $repr = array(get_class($this).'('.($this->isMultitarget ? implode(', ', $this->names) : $this->names).',');
+    foreach ($this->isMultitarget ? $this->values : array($this->values) as $node)
     {
-        parent::__construct(array('names' => $names, 'values' => $values), array('capture' => $capture, 'safe' => false), $lineno, $tag);
+      foreach (explode("\n", $node->__toString()) as $line)
+      {
+        $repr[] = '  '.$line;
+      }
+    }
+    $repr[] = ')';
 
-        /*
-         * Optimizes the node when capture is used for a large block of text.
-         *
-         * {% set foo %}foo{% endset %} is compiled to $context['foo'] = new Twig_Markup("foo");
-         */
-        if ($this->getAttribute('capture')) {
-            $this->setAttribute('safe', true);
+    return implode("\n", $repr);
+  }
 
-            $values = $this->getNode('values');
-            if ($values instanceof Twig_Node_Text) {
-                $this->setNode('values', new Twig_Node_Expression_Constant($values->getAttribute('data'), $values->getLine()));
-                $this->setAttribute('capture', false);
-            }
+  public function getNodes()
+  {
+    if ($this->isMultitarget)
+    {
+      return $this->values;
+    }
+    else
+    {
+      return array($this->values);
+    }
+  }
+
+  public function setNodes(array $nodes)
+  {
+    $this->values = $this->isMultitarget ? $nodes : $nodes[0];
+  }
+
+  public function compile($compiler)
+  {
+    $compiler->addDebugInfo($this);
+
+    if ($this->isMultitarget)
+    {
+      $compiler->write('list(');
+      foreach ($this->names as $idx => $node)
+      {
+        if ($idx)
+        {
+          $compiler->raw(', ');
         }
+
+        $compiler
+          ->raw('$context[')
+          ->string($node->getName())
+          ->raw(']')
+        ;
+      }
+      $compiler->raw(')');
+    }
+    else
+    {
+      $compiler
+        ->write('$context[')
+        ->string($this->names->getName())
+        ->raw(']')
+      ;
     }
 
-    /**
-     * Compiles the node to PHP.
-     *
-     * @param Twig_Compiler A Twig_Compiler instance
-     */
-    public function compile(Twig_Compiler $compiler)
+    $compiler->raw(' = ');
+
+    if ($this->isMultitarget)
     {
-        $compiler->addDebugInfo($this);
-
-        if (count($this->getNode('names')) > 1) {
-            $compiler->write('list(');
-            foreach ($this->getNode('names') as $idx => $node) {
-                if ($idx) {
-                    $compiler->raw(', ');
-                }
-
-                $compiler->subcompile($node);
-            }
-            $compiler->raw(')');
-        } else {
-            if ($this->getAttribute('capture')) {
-                $compiler
-                    ->write("ob_start();\n")
-                    ->subcompile($this->getNode('values'))
-                ;
-            }
-
-            $compiler->subcompile($this->getNode('names'), false);
-
-            if ($this->getAttribute('capture')) {
-                $compiler->raw(" = ('' === \$tmp = ob_get_clean()) ? '' : new Twig_Markup(\$tmp, \$this->env->getCharset())");
-            }
+      $compiler->write('array(');
+      foreach ($this->values as $idx => $value)
+      {
+        if ($idx)
+        {
+          $compiler->raw(', ');
         }
 
-        if (!$this->getAttribute('capture')) {
-            $compiler->raw(' = ');
-
-            if (count($this->getNode('names')) > 1) {
-                $compiler->write('array(');
-                foreach ($this->getNode('values') as $idx => $value) {
-                    if ($idx) {
-                        $compiler->raw(', ');
-                    }
-
-                    $compiler->subcompile($value);
-                }
-                $compiler->raw(')');
-            } else {
-                if ($this->getAttribute('safe')) {
-                    $compiler
-                        ->raw("('' === \$tmp = ")
-                        ->subcompile($this->getNode('values'))
-                        ->raw(") ? '' : new Twig_Markup(\$tmp, \$this->env->getCharset())")
-                    ;
-                } else {
-                    $compiler->subcompile($this->getNode('values'));
-                }
-            }
-        }
-
-        $compiler->raw(";\n");
+        $compiler->subcompile($value);
+      }
+      $compiler->raw(')');
     }
+    else
+    {
+      $compiler->subcompile($this->values);
+    }
+
+    $compiler->raw(";\n");
+  }
+
+  public function getNames()
+  {
+    return $this->names;
+  }
 }

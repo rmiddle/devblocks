@@ -9,85 +9,67 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-
-/**
- * Tests a condition.
- *
- * <pre>
- * {% if users %}
- *  <ul>
- *    {% for user in users %}
- *      <li>{{ user.username|e }}</li>
- *    {% endfor %}
- *  </ul>
- * {% endif %}
- * </pre>
- */
 class Twig_TokenParser_If extends Twig_TokenParser
 {
-    /**
-     * Parses a token and returns a node.
-     *
-     * @param Twig_Token $token A Twig_Token instance
-     *
-     * @return Twig_NodeInterface A Twig_NodeInterface instance
-     */
-    public function parse(Twig_Token $token)
+  public function parse(Twig_Token $token)
+  {
+    $lineno = $token->getLine();
+    $expr = $this->parser->getExpressionParser()->parseExpression();
+    $this->parser->getStream()->expect(Twig_Token::BLOCK_END_TYPE);
+    $body = $this->parser->subparse(array($this, 'decideIfFork'));
+    $tests = array(array($expr, $body));
+    $else = null;
+
+    $end = false;
+    while (!$end)
     {
-        $lineno = $token->getLine();
-        $expr = $this->parser->getExpressionParser()->parseExpression();
-        $this->parser->getStream()->expect(Twig_Token::BLOCK_END_TYPE);
-        $body = $this->parser->subparse(array($this, 'decideIfFork'));
-        $tests = array($expr, $body);
-        $else = null;
+      try
+      {
+        switch ($this->parser->getStream()->next()->getValue())
+        {
+          case 'else':
+            $this->parser->getStream()->expect(Twig_Token::BLOCK_END_TYPE);
+            $else = $this->parser->subparse(array($this, 'decideIfEnd'));
+            break;
 
-        $end = false;
-        while (!$end) {
-            switch ($this->parser->getStream()->next()->getValue()) {
-                case 'else':
-                    $this->parser->getStream()->expect(Twig_Token::BLOCK_END_TYPE);
-                    $else = $this->parser->subparse(array($this, 'decideIfEnd'));
-                    break;
+          case 'elseif':
+            $expr = $this->parser->getExpressionParser()->parseExpression();
+            $this->parser->getStream()->expect(Twig_Token::BLOCK_END_TYPE);
+            $body = $this->parser->subparse(array($this, 'decideIfFork'));
+            $tests[] = array($expr, $body);
+            break;
 
-                case 'elseif':
-                    $expr = $this->parser->getExpressionParser()->parseExpression();
-                    $this->parser->getStream()->expect(Twig_Token::BLOCK_END_TYPE);
-                    $body = $this->parser->subparse(array($this, 'decideIfFork'));
-                    $tests[] = $expr;
-                    $tests[] = $body;
-                    break;
+          case 'endif':
+            $end = true;
+            break;
 
-                case 'endif':
-                    $end = true;
-                    break;
-
-                default:
-                    throw new Twig_Error_Syntax(sprintf('Unexpected end of template. Twig was looking for the following tags "else", "elseif", or "endif" to close the "if" block started at line %d)', $lineno), -1);
-            }
+          default:
+            throw new Twig_SyntaxError('', -1);
         }
-
-        $this->parser->getStream()->expect(Twig_Token::BLOCK_END_TYPE);
-
-        return new Twig_Node_If(new Twig_Node($tests), $else, $lineno, $this->getTag());
+      }
+      catch (Twig_SyntaxError $e)
+      {
+        throw new Twig_SyntaxError(sprintf('Unexpected end of template. Twig was looking for the following tags "else", "elseif", or "endif" to close the "if" block started at line %d)', $lineno), -1);
+      }
     }
 
-    public function decideIfFork(Twig_Token $token)
-    {
-        return $token->test(array('elseif', 'else', 'endif'));
-    }
+    $this->parser->getStream()->expect(Twig_Token::BLOCK_END_TYPE);
 
-    public function decideIfEnd(Twig_Token $token)
-    {
-        return $token->test(array('endif'));
-    }
+    return new Twig_Node_If($tests, $else, $lineno, $this->getTag());
+  }
 
-    /**
-     * Gets the tag name associated with this token parser.
-     *
-     * @return string The tag name
-     */
-    public function getTag()
-    {
-        return 'if';
-    }
+  public function decideIfFork($token)
+  {
+    return $token->test(array('elseif', 'else', 'endif'));
+  }
+
+  public function decideIfEnd($token)
+  {
+    return $token->test(array('endif'));
+  }
+
+  public function getTag()
+  {
+    return 'if';
+  }
 }

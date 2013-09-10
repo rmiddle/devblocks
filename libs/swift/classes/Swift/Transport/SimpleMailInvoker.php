@@ -18,6 +18,7 @@
  
  */
  
+//@require 'Swift/Transport/MailInvoker.php';
 
 /**
  * This is the implementation class for {@link Swift_Transport_MailInvoker}.
@@ -46,11 +47,11 @@ class Swift_Transport_SimpleMailInvoker implements Swift_Transport_MailInvoker
   {
     if (!ini_get('safe_mode'))
     {
-      return @mail($to, $subject, $body, $headers, $extraParams);
+      return mail($to, $subject, $body, $headers, $extraParams);
     }
     else
     {
-      return @mail($to, $subject, $body, $headers);      
+      return mail($to, $subject, $body, $headers);      
     }
   }
   

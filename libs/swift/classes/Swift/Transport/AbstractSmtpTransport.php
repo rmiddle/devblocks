@@ -8,6 +8,13 @@
  * file that was distributed with this source code.
  */
 
+//@require 'Swift/Transport.php';
+//@require 'Swift/Transport/IoBuffer.php';
+//@require 'Swift/Transport/CommandSentException.php';
+//@require 'Swift/TransportException.php';
+//@require 'Swift/Mime/Message.php';
+//@require 'Swift/Events/EventDispatcher.php';
+//@require 'Swift/Events/EventListener.php';
 
 /**
  * Sends Messages over SMTP.
@@ -31,9 +38,6 @@ abstract class Swift_Transport_AbstractSmtpTransport
   
   /** The event dispatching layer */
   protected $_eventDispatcher;
-  
-  /** Source Ip */
-  protected $_sourceIp;
   
   /** Return an array of params for the Buffer */
   abstract protected function _getBufferParams();
@@ -59,7 +63,6 @@ abstract class Swift_Transport_AbstractSmtpTransport
    * brackets (i.e. [127.0.0.1]).
    * 
    * @param string $domain
-   * @return Swift_Transport_AbstractSmtpTransport
    */
   public function setLocalDomain($domain)
   {
@@ -77,25 +80,6 @@ abstract class Swift_Transport_AbstractSmtpTransport
     return $this->_domain;
   }
   
-
-  /**
-   * Sets the sourceIp
-   * @param string $source
-   */
-  public function setSourceIp($source) 
-  {
-    $this->_sourceIp=$source;
-  }
-
-  /**
-   * Returns the ip used to connect to the destination
-   * @return string
-   */
-  public function getSourceIp()
-  {
-    return $this->_sourceIp;
-  }
-
   /**
    * Start the SMTP connection.
    */
@@ -145,7 +129,7 @@ abstract class Swift_Transport_AbstractSmtpTransport
   /**
    * Send the given Message.
    * 
-   * Recipient/sender data will be retrieved from the Message API.
+   * Recipient/sender data will be retreived from the Message API.
    * The return value is the number of recipients who were accepted for delivery.
    * 
    * @param Swift_Mime_Message $message
@@ -157,6 +141,13 @@ abstract class Swift_Transport_AbstractSmtpTransport
     $sent = 0;
     $failedRecipients = (array) $failedRecipients;
     
+    if (!$reversePath = $this->_getReversePath($message))
+    {
+      throw new Swift_TransportException(
+        'Cannot send message without a sender address'
+        );
+    }
+    
     if ($evt = $this->_eventDispatcher->createSendEvent($this, $message))
     {
       $this->_eventDispatcher->dispatchEvent($evt, 'beforeSendPerformed');
@@ -164,13 +155,6 @@ abstract class Swift_Transport_AbstractSmtpTransport
       {
         return 0;
       }
-    }
-    
-    if (!$reversePath = $this->_getReversePath($message))
-    {
-      throw new Swift_TransportException(
-        'Cannot send message without a sender address'
-        );
     }
     
     $to = (array) $message->getTo();

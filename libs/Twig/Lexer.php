@@ -14,393 +14,321 @@
  * Lexes a template string.
  *
  * @package    twig
- * @author     Fabien Potencier <fabien@symfony.com>
+ * @author     Fabien Potencier <fabien.potencier@symfony-project.com>
+ * @version    SVN: $Id$
  */
 class Twig_Lexer implements Twig_LexerInterface
 {
-    protected $tokens;
-    protected $code;
-    protected $cursor;
-    protected $lineno;
-    protected $end;
-    protected $state;
-    protected $states;
-    protected $brackets;
-    protected $env;
-    protected $filename;
-    protected $options;
-    protected $regexes;
-    protected $position;
-    protected $positions;
+  protected $cursor;
+  protected $position;
+  protected $end;
+  protected $pushedBack;
+  protected $code;
+  protected $lineno;
+  protected $filename;
+  protected $env;
+  protected $options;
 
-    const STATE_DATA            = 0;
-    const STATE_BLOCK           = 1;
-    const STATE_VAR             = 2;
-    const STATE_STRING          = 3;
-    const STATE_INTERPOLATION   = 4;
+  const POSITION_DATA  = 0;
+  const POSITION_BLOCK = 1;
+  const POSITION_VAR   = 2;
 
-    const REGEX_NAME            = '/[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*/A';
-    const REGEX_NUMBER          = '/[0-9]+(?:\.[0-9]+)?/A';
-    const REGEX_STRING          = '/"([^#"\\\\]*(?:\\\\.[^#"\\\\]*)*)"|\'([^\'\\\\]*(?:\\\\.[^\'\\\\]*)*)\'/As';
-    const REGEX_DQ_STRING_DELIM = '/"/A';
-    const REGEX_DQ_STRING_PART  = '/[^#"\\\\]*(?:(?:\\\\.|#(?!\{))[^#"\\\\]*)*/As';
-    const PUNCTUATION           = '()[]{}?:.,|';
+  const REGEX_NAME     = '/[A-Za-z_][A-Za-z0-9_]*/A';
+  const REGEX_NUMBER   = '/[0-9]+(?:\.[0-9]+)?/A';
+  const REGEX_STRING   = '/(?:"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"|\'([^\'\\\\]*(?:\\\\.[^\'\\\\]*)*)\')/Asm';
+  const REGEX_OPERATOR = '/<=? | >=? | [!=]= | \/\/ | \.\. | [(){}.,%*\/+~|-] | \[ | \] | \? | \:/Ax';
 
-    public function __construct(Twig_Environment $env, array $options = array())
+  public function __construct(Twig_Environment $env = null, array $options = array())
+  {
+    $this->env = $env;
+
+    $this->options = array_merge(array(
+      'tag_comment'  => array('{#', '#}'),
+      'tag_block'    => array('{%', '%}'),
+      'tag_variable' => array('{{', '}}'),
+    ), $options);
+  }
+
+  /**
+   * Tokenizes a source code.
+   *
+   * @param  string $code     The source code
+   * @param  string $filename A unique identifier for the source code
+   *
+   * @return Twig_TokenStream A token stream instance
+   */
+  public function tokenize($code, $filename = 'n/a')
+  {
+    $this->code = preg_replace('/(\r\n|\r|\n)/', "\n", $code);
+    $this->filename = $filename;
+    $this->cursor = 0;
+    $this->lineno = 1;
+    $this->pushedBack = array();
+    $this->end = strlen($this->code);
+    $this->position = self::POSITION_DATA;
+
+    $tokens = array();
+    $end = false;
+    while (!$end)
     {
-        $this->env = $env;
+      $token = $this->nextToken();
 
-        $this->options = array_merge(array(
-            'tag_comment'     => array('{#', '#}'),
-            'tag_block'       => array('{%', '%}'),
-            'tag_variable'    => array('{{', '}}'),
-            'whitespace_trim' => '-',
-            'interpolation'   => array('#{', '}'),
-        ), $options);
+      $tokens[] = $token;
 
-        $this->regexes = array(
-            'lex_var'             => '/\s*'.preg_quote($this->options['whitespace_trim'].$this->options['tag_variable'][1], '/').'\s*|\s*'.preg_quote($this->options['tag_variable'][1], '/').'/A',
-            'lex_block'           => '/\s*(?:'.preg_quote($this->options['whitespace_trim'].$this->options['tag_block'][1], '/').'\s*|\s*'.preg_quote($this->options['tag_block'][1], '/').')\n?/A',
-            'lex_raw_data'        => '/('.preg_quote($this->options['tag_block'][0].$this->options['whitespace_trim'], '/').'|'.preg_quote($this->options['tag_block'][0], '/').')\s*endraw\s*(?:'.preg_quote($this->options['whitespace_trim'].$this->options['tag_block'][1], '/').'\s*|\s*'.preg_quote($this->options['tag_block'][1], '/').')/s',
-            'operator'            => $this->getOperatorRegex(),
-            'lex_comment'         => '/(?:'.preg_quote($this->options['whitespace_trim'], '/').preg_quote($this->options['tag_comment'][1], '/').'\s*|'.preg_quote($this->options['tag_comment'][1], '/').')\n?/s',
-            'lex_block_raw'       => '/\s*raw\s*(?:'.preg_quote($this->options['whitespace_trim'].$this->options['tag_block'][1], '/').'\s*|\s*'.preg_quote($this->options['tag_block'][1], '/').')/As',
-            'lex_block_line'      => '/\s*line\s+(\d+)\s*'.preg_quote($this->options['tag_block'][1], '/').'/As',
-            'lex_tokens_start'    => '/('.preg_quote($this->options['tag_variable'][0], '/').'|'.preg_quote($this->options['tag_block'][0], '/').'|'.preg_quote($this->options['tag_comment'][0], '/').')('.preg_quote($this->options['whitespace_trim'], '/').')?/s',
-            'interpolation_start' => '/'.preg_quote($this->options['interpolation'][0], '/').'\s*/A',
-            'interpolation_end'   => '/\s*'.preg_quote($this->options['interpolation'][1], '/').'/A',
-        );
+      $end = $token->getType() === Twig_Token::EOF_TYPE;
     }
 
-    /**
-     * Tokenizes a source code.
-     *
-     * @param string $code     The source code
-     * @param string $filename A unique identifier for the source code
-     *
-     * @return Twig_TokenStream A token stream instance
-     */
-    public function tokenize($code, $filename = null)
+    return new Twig_TokenStream($tokens, $this->filename, $this->env->getTrimBlocks());
+  }
+
+  public function setEnvironment(Twig_Environment $env)
+  {
+    $this->env = $env;
+  }
+
+  /**
+   * Parses the next token and returns it.
+   */
+  protected function nextToken()
+  {
+    // do we have tokens pushed back? get one
+    if (!empty($this->pushedBack))
     {
-        if (function_exists('mb_internal_encoding') && ((int) ini_get('mbstring.func_overload')) & 2) {
-            $mbEncoding = mb_internal_encoding();
-            mb_internal_encoding('ASCII');
-        }
-
-        $this->code = str_replace(array("\r\n", "\r"), "\n", $code);
-        $this->filename = $filename;
-        $this->cursor = 0;
-        $this->lineno = 1;
-        $this->end = strlen($this->code);
-        $this->tokens = array();
-        $this->state = self::STATE_DATA;
-        $this->states = array();
-        $this->brackets = array();
-        $this->position = -1;
-
-        // find all token starts in one go
-        preg_match_all($this->regexes['lex_tokens_start'], $this->code, $matches, PREG_OFFSET_CAPTURE);
-        $this->positions = $matches;
-
-        while ($this->cursor < $this->end) {
-            // dispatch to the lexing functions depending
-            // on the current state
-            switch ($this->state) {
-                case self::STATE_DATA:
-                    $this->lexData();
-                    break;
-
-                case self::STATE_BLOCK:
-                    $this->lexBlock();
-                    break;
-
-                case self::STATE_VAR:
-                    $this->lexVar();
-                    break;
-
-                case self::STATE_STRING:
-                    $this->lexString();
-                    break;
-
-                case self::STATE_INTERPOLATION:
-                    $this->lexInterpolation();
-                    break;
-            }
-        }
-
-        $this->pushToken(Twig_Token::EOF_TYPE);
-
-        if (!empty($this->brackets)) {
-            list($expect, $lineno) = array_pop($this->brackets);
-            throw new Twig_Error_Syntax(sprintf('Unclosed "%s"', $expect), $lineno, $this->filename);
-        }
-
-        if (isset($mbEncoding)) {
-            mb_internal_encoding($mbEncoding);
-        }
-
-        return new Twig_TokenStream($this->tokens, $this->filename);
+      return array_shift($this->pushedBack);
     }
 
-    protected function lexData()
+    // have we reached the end of the code?
+    if ($this->cursor >= $this->end)
     {
-        // if no matches are left we return the rest of the template as simple text token
-        if ($this->position == count($this->positions[0]) - 1) {
-            $this->pushToken(Twig_Token::TEXT_TYPE, substr($this->code, $this->cursor));
-            $this->cursor = $this->end;
-
-            return;
-        }
-
-        // Find the first token after the current cursor
-        $position = $this->positions[0][++$this->position];
-        while ($position[1] < $this->cursor) {
-            if ($this->position == count($this->positions[0]) - 1) {
-                return;
-            }
-            $position = $this->positions[0][++$this->position];
-        }
-
-        // push the template text first
-        $text = $textContent = substr($this->code, $this->cursor, $position[1] - $this->cursor);
-        if (isset($this->positions[2][$this->position][0])) {
-            $text = rtrim($text);
-        }
-        $this->pushToken(Twig_Token::TEXT_TYPE, $text);
-        $this->moveCursor($textContent.$position[0]);
-
-        switch ($this->positions[1][$this->position][0]) {
-            case $this->options['tag_comment'][0]:
-                $this->lexComment();
-                break;
-
-            case $this->options['tag_block'][0]:
-                // raw data?
-                if (preg_match($this->regexes['lex_block_raw'], $this->code, $match, null, $this->cursor)) {
-                    $this->moveCursor($match[0]);
-                    $this->lexRawData();
-                // {% line \d+ %}
-                } elseif (preg_match($this->regexes['lex_block_line'], $this->code, $match, null, $this->cursor)) {
-                    $this->moveCursor($match[0]);
-                    $this->lineno = (int) $match[1];
-                } else {
-                    $this->pushToken(Twig_Token::BLOCK_START_TYPE);
-                    $this->pushState(self::STATE_BLOCK);
-                }
-                break;
-
-            case $this->options['tag_variable'][0]:
-                $this->pushToken(Twig_Token::VAR_START_TYPE);
-                $this->pushState(self::STATE_VAR);
-                break;
-        }
+      return new Twig_Token(Twig_Token::EOF_TYPE, '', $this->lineno);
     }
 
-    protected function lexBlock()
+    // otherwise dispatch to the lexing functions depending
+    // on our current position in the code.
+    switch ($this->position)
     {
-        if (empty($this->brackets) && preg_match($this->regexes['lex_block'], $this->code, $match, null, $this->cursor)) {
-            $this->pushToken(Twig_Token::BLOCK_END_TYPE);
-            $this->moveCursor($match[0]);
-            $this->popState();
-        } else {
-            $this->lexExpression();
-        }
+      case self::POSITION_DATA:
+        $tokens = $this->lexData();
+        break;
+
+      case self::POSITION_BLOCK:
+        $tokens = $this->lexBlock();
+        break;
+
+      case self::POSITION_VAR:
+        $tokens = $this->lexVar();
+        break;
     }
 
-    protected function lexVar()
+    // if the return value is not an array it's a token
+    if (!is_array($tokens))
     {
-        if (empty($this->brackets) && preg_match($this->regexes['lex_var'], $this->code, $match, null, $this->cursor)) {
-            $this->pushToken(Twig_Token::VAR_END_TYPE);
-            $this->moveCursor($match[0]);
-            $this->popState();
-        } else {
-            $this->lexExpression();
-        }
+      return $tokens;
+    }
+    // empty array, call again
+    else if (empty($tokens))
+    {
+      return $this->nextToken();
+    }
+    // if we have multiple items we push them to the buffer
+    else if (count($tokens) > 1)
+    {
+      $first = array_shift($tokens);
+      $this->pushedBack = $tokens;
+
+      return $first;
+    }
+    // otherwise return the first item of the array.
+    else
+    {
+      return $tokens[0];
+    }
+  }
+
+  protected function lexData()
+  {
+    $match = null;
+
+    $pos1 = strpos($this->code, $this->options['tag_comment'][0], $this->cursor);
+    $pos2 = strpos($this->code, $this->options['tag_variable'][0], $this->cursor);
+    $pos3 = strpos($this->code, $this->options['tag_block'][0], $this->cursor);
+
+    // if no matches are left we return the rest of the template
+    // as simple text token
+    if (false === $pos1 && false === $pos2 && false === $pos3)
+    {
+      $rv = new Twig_Token(Twig_Token::TEXT_TYPE, substr($this->code, $this->cursor), $this->lineno);
+      $this->cursor = $this->end;
+
+      return $rv;
     }
 
-    protected function lexExpression()
+    // min
+    $pos = -log(0);
+    if (false !== $pos1 && $pos1 < $pos)
     {
-        // whitespace
-        if (preg_match('/\s+/A', $this->code, $match, null, $this->cursor)) {
-            $this->moveCursor($match[0]);
-
-            if ($this->cursor >= $this->end) {
-                throw new Twig_Error_Syntax(sprintf('Unexpected end of file: Unclosed "%s"', $this->state === self::STATE_BLOCK ? 'block' : 'variable'), $this->lineno, $this->filename);
-            }
-        }
-
-        // operators
-        if (preg_match($this->regexes['operator'], $this->code, $match, null, $this->cursor)) {
-            $this->pushToken(Twig_Token::OPERATOR_TYPE, $match[0]);
-            $this->moveCursor($match[0]);
-        }
-        // names
-        elseif (preg_match(self::REGEX_NAME, $this->code, $match, null, $this->cursor)) {
-            $this->pushToken(Twig_Token::NAME_TYPE, $match[0]);
-            $this->moveCursor($match[0]);
-        }
-        // numbers
-        elseif (preg_match(self::REGEX_NUMBER, $this->code, $match, null, $this->cursor)) {
-            $number = (float) $match[0];  // floats
-            if (ctype_digit($match[0]) && $number <= PHP_INT_MAX) {
-                $number = (int) $match[0]; // integers lower than the maximum
-            }
-            $this->pushToken(Twig_Token::NUMBER_TYPE, $number);
-            $this->moveCursor($match[0]);
-        }
-        // punctuation
-        elseif (false !== strpos(self::PUNCTUATION, $this->code[$this->cursor])) {
-            // opening bracket
-            if (false !== strpos('([{', $this->code[$this->cursor])) {
-                $this->brackets[] = array($this->code[$this->cursor], $this->lineno);
-            }
-            // closing bracket
-            elseif (false !== strpos(')]}', $this->code[$this->cursor])) {
-                if (empty($this->brackets)) {
-                    throw new Twig_Error_Syntax(sprintf('Unexpected "%s"', $this->code[$this->cursor]), $this->lineno, $this->filename);
-                }
-
-                list($expect, $lineno) = array_pop($this->brackets);
-                if ($this->code[$this->cursor] != strtr($expect, '([{', ')]}')) {
-                    throw new Twig_Error_Syntax(sprintf('Unclosed "%s"', $expect), $lineno, $this->filename);
-                }
-            }
-
-            $this->pushToken(Twig_Token::PUNCTUATION_TYPE, $this->code[$this->cursor]);
-            ++$this->cursor;
-        }
-        // strings
-        elseif (preg_match(self::REGEX_STRING, $this->code, $match, null, $this->cursor)) {
-            $this->pushToken(Twig_Token::STRING_TYPE, stripcslashes(substr($match[0], 1, -1)));
-            $this->moveCursor($match[0]);
-        }
-        // opening double quoted string
-        elseif (preg_match(self::REGEX_DQ_STRING_DELIM, $this->code, $match, null, $this->cursor)) {
-            $this->brackets[] = array('"', $this->lineno);
-            $this->pushState(self::STATE_STRING);
-            $this->moveCursor($match[0]);
-        }
-        // unlexable
-        else {
-            throw new Twig_Error_Syntax(sprintf('Unexpected character "%s"', $this->code[$this->cursor]), $this->lineno, $this->filename);
-        }
+      $pos = $pos1;
+      $token = $this->options['tag_comment'][0];
+    }
+    if (false !== $pos2 && $pos2 < $pos)
+    {
+      $pos = $pos2;
+      $token = $this->options['tag_variable'][0];
+    }
+    if (false !== $pos3 && $pos3 < $pos)
+    {
+      $pos = $pos3;
+      $token = $this->options['tag_block'][0];
     }
 
-    protected function lexRawData()
+    // update the lineno on the instance
+    $lineno = $this->lineno;
+
+    $text = substr($this->code, $this->cursor, $pos - $this->cursor);
+    $this->moveCursor($text.$token);
+    $this->moveLineNo($text.$token);
+
+    // array of tokens
+    $result = array();
+
+    // push the template text first
+    if (!empty($text))
     {
-        if (!preg_match($this->regexes['lex_raw_data'], $this->code, $match, PREG_OFFSET_CAPTURE, $this->cursor)) {
-            throw new Twig_Error_Syntax(sprintf('Unexpected end of file: Unclosed "block"'), $this->lineno, $this->filename);
+      $result[] = new Twig_Token(Twig_Token::TEXT_TYPE, $text, $lineno);
+      $lineno += substr_count($text, "\n");
+    }
+
+    switch ($token)
+    {
+      case $this->options['tag_comment'][0]:
+        if (!preg_match('/(.*?)'.preg_quote($this->options['tag_comment'][1], '/').'/As', $this->code, $match, null, $this->cursor))
+        {
+          throw new Twig_SyntaxError('unclosed comment', $this->lineno, $this->filename);
         }
+        $this->moveCursor($match[0]);
+        $this->moveLineNo($match[0]);
+        break;
 
-        $text = substr($this->code, $this->cursor, $match[0][1] - $this->cursor);
-        $this->moveCursor($text.$match[0][0]);
-
-        if (false !== strpos($match[1][0], $this->options['whitespace_trim'])) {
-            $text = rtrim($text);
+      case $this->options['tag_block'][0]:
+        // raw data?
+        if (preg_match('/\s*raw\s*'.preg_quote($this->options['tag_block'][1], '/').'(.*?)'.preg_quote($this->options['tag_block'][0], '/').'\s*endraw\s*'.preg_quote($this->options['tag_block'][1], '/').'/As', $this->code, $match, null, $this->cursor))
+        {
+          $result[] = new Twig_Token(Twig_Token::TEXT_TYPE, $match[1], $lineno);
+          $this->moveCursor($match[0]);
+          $this->moveLineNo($match[0]);
+          $this->position = self::POSITION_DATA;
         }
-
-        $this->pushToken(Twig_Token::TEXT_TYPE, $text);
-    }
-
-    protected function lexComment()
-    {
-        if (!preg_match($this->regexes['lex_comment'], $this->code, $match, PREG_OFFSET_CAPTURE, $this->cursor)) {
-            throw new Twig_Error_Syntax('Unclosed comment', $this->lineno, $this->filename);
+        else
+        {
+          $result[] = new Twig_Token(Twig_Token::BLOCK_START_TYPE, '', $lineno);
+          $this->position = self::POSITION_BLOCK;
         }
+        break;
 
-        $this->moveCursor(substr($this->code, $this->cursor, $match[0][1] - $this->cursor).$match[0][0]);
+      case $this->options['tag_variable'][0]:
+        $result[] = new Twig_Token(Twig_Token::VAR_START_TYPE, '', $lineno);
+        $this->position = self::POSITION_VAR;
+        break;
     }
 
-    protected function lexString()
+    return $result;
+  }
+
+  protected function lexBlock()
+  {
+    if (preg_match('/\s*'.preg_quote($this->options['tag_block'][1], '/').'/As', $this->code, $match, null, $this->cursor))
     {
-        if (preg_match($this->regexes['interpolation_start'], $this->code, $match, null, $this->cursor)) {
-            $this->brackets[] = array($this->options['interpolation'][0], $this->lineno);
-            $this->pushToken(Twig_Token::INTERPOLATION_START_TYPE);
-            $this->moveCursor($match[0]);
-            $this->pushState(self::STATE_INTERPOLATION);
+      $lineno = $this->lineno;
+      $this->moveCursor($match[0]);
+      $this->moveLineNo($match[0]);
+      $this->position = self::POSITION_DATA;
 
-        } elseif (preg_match(self::REGEX_DQ_STRING_PART, $this->code, $match, null, $this->cursor) && strlen($match[0]) > 0) {
-            $this->pushToken(Twig_Token::STRING_TYPE, stripcslashes($match[0]));
-            $this->moveCursor($match[0]);
-
-        } elseif (preg_match(self::REGEX_DQ_STRING_DELIM, $this->code, $match, null, $this->cursor)) {
-
-            list($expect, $lineno) = array_pop($this->brackets);
-            if ($this->code[$this->cursor] != '"') {
-                throw new Twig_Error_Syntax(sprintf('Unclosed "%s"', $expect), $lineno, $this->filename);
-            }
-
-            $this->popState();
-            ++$this->cursor;
-        }
+      return new Twig_Token(Twig_Token::BLOCK_END_TYPE, '', $lineno);
     }
 
-    protected function lexInterpolation()
+    return $this->lexExpression();
+  }
+
+  protected function lexVar()
+  {
+    if (preg_match('/\s*'.preg_quote($this->options['tag_variable'][1], '/').'/As', $this->code, $match, null, $this->cursor))
     {
-        $bracket = end($this->brackets);
-        if ($this->options['interpolation'][0] === $bracket[0] && preg_match($this->regexes['interpolation_end'], $this->code, $match, null, $this->cursor)) {
-            array_pop($this->brackets);
-            $this->pushToken(Twig_Token::INTERPOLATION_END_TYPE);
-            $this->moveCursor($match[0]);
-            $this->popState();
-        } else {
-            $this->lexExpression();
-        }
+      $lineno = $this->lineno;
+      $this->moveCursor($match[0]);
+      $this->moveLineNo($match[0]);
+      $this->position = self::POSITION_DATA;
+
+      return new Twig_Token(Twig_Token::VAR_END_TYPE, '', $lineno);
     }
 
-    protected function pushToken($type, $value = '')
+    return $this->lexExpression();
+  }
+
+  protected function lexExpression()
+  {
+    $match = null;
+
+    // whitespace
+    while (preg_match('/\s+/As', $this->code, $match, null, $this->cursor))
     {
-        // do not push empty text tokens
-        if (Twig_Token::TEXT_TYPE === $type && '' === $value) {
-            return;
-        }
-
-        $this->tokens[] = new Twig_Token($type, $value, $this->lineno);
+      $this->moveCursor($match[0]);
+      $this->moveLineNo($match[0]);
     }
 
-    protected function moveCursor($text)
+    // sanity check
+    if ($this->cursor >= $this->end)
     {
-        $this->cursor += strlen($text);
-        $this->lineno += substr_count($text, "\n");
+      throw new Twig_SyntaxError('Unexpected end of stream', $this->lineno, $this->filename);
     }
 
-    protected function getOperatorRegex()
+    // first parse operators
+    if (preg_match(self::REGEX_OPERATOR, $this->code, $match, null, $this->cursor))
     {
-        $operators = array_merge(
-            array('='),
-            array_keys($this->env->getUnaryOperators()),
-            array_keys($this->env->getBinaryOperators())
-        );
+      $this->moveCursor($match[0]);
 
-        $operators = array_combine($operators, array_map('strlen', $operators));
-        arsort($operators);
-
-        $regex = array();
-        foreach ($operators as $operator => $length) {
-            // an operator that ends with a character must be followed by
-            // a whitespace or a parenthesis
-            if (ctype_alpha($operator[$length - 1])) {
-                $regex[] = preg_quote($operator, '/').'(?=[\s()])';
-            } else {
-                $regex[] = preg_quote($operator, '/');
-            }
-        }
-
-        return '/'.implode('|', $regex).'/A';
+      return new Twig_Token(Twig_Token::OPERATOR_TYPE, $match[0], $this->lineno);
     }
-
-    protected function pushState($state)
+    // now names
+    else if (preg_match(self::REGEX_NAME, $this->code, $match, null, $this->cursor))
     {
-        $this->states[] = $this->state;
-        $this->state = $state;
-    }
+      $this->moveCursor($match[0]);
 
-    protected function popState()
+      return new Twig_Token(Twig_Token::NAME_TYPE, $match[0], $this->lineno);
+    }
+    // then numbers
+    else if (preg_match(self::REGEX_NUMBER, $this->code, $match, null, $this->cursor))
     {
-        if (0 === count($this->states)) {
-            throw new Exception('Cannot pop state without a previous state');
-        }
+      $this->moveCursor($match[0]);
+      $value = (float)$match[0];
+      if ((int)$value === $value)
+      {
+        $value = (int)$value;
+      }
 
-        $this->state = array_pop($this->states);
+      return new Twig_Token(Twig_Token::NUMBER_TYPE, $value, $this->lineno);
     }
+    // and finally strings
+    else if (preg_match(self::REGEX_STRING, $this->code, $match, null, $this->cursor))
+    {
+      $this->moveCursor($match[0]);
+      $this->moveLineNo($match[0]);
+      $value = stripcslashes(substr($match[0], 1, strlen($match[0]) - 2));
+
+      return new Twig_Token(Twig_Token::STRING_TYPE, $value, $this->lineno);
+    }
+
+    // unlexable
+    throw new Twig_SyntaxError(sprintf("Unexpected character '%s'", $this->code[$this->cursor]), $this->lineno, $this->filename);
+  }
+
+  protected function moveLineNo($text)
+  {
+    $this->lineno += substr_count($text, "\n");
+  }
+
+  protected function moveCursor($text)
+  {
+    $this->cursor += strlen($text);
+  }
+
 }
